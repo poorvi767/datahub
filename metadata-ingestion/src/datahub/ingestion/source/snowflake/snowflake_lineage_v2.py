@@ -21,7 +21,7 @@ from snowflake.connector import SnowflakeConnection
 import datahub.emitter.mce_builder as builder
 from datahub.emitter.mcp import MetadataChangeProposalWrapper
 from datahub.ingestion.api.workunit import MetadataWorkUnit
-from datahub.ingestion.source.aws.s3_util import make_s3_urn
+from datahub.ingestion.source.aws.s3_util import make_s3_urn_for_lineage
 from datahub.ingestion.source.snowflake.constants import (
     LINEAGE_PERMISSION_ERROR,
     SnowflakeEdition,
@@ -136,7 +136,6 @@ class SnowflakeLineageExtractor(
             return
 
         self._populate_external_lineage_map(discovered_tables)
-
         if self.config.include_view_lineage:
             if len(discovered_views) > 0:
                 yield from self.get_view_upstream_workunits(
@@ -200,14 +199,15 @@ class SnowflakeLineageExtractor(
         self,
         dataset_identifier: str,
         result: SqlParsingResult,
-    ) -> MetadataWorkUnit:
+    ) -> Iterable[MetadataWorkUnit]:
         upstreams, fine_upstreams = self.get_upstreams_from_sql_parsing_result(
             self.dataset_urn_builder(dataset_identifier), result
         )
-        self.report.num_views_with_upstreams += 1
-        return self._create_upstream_lineage_workunit(
-            dataset_identifier, upstreams, fine_upstreams
-        )
+        if upstreams:
+            self.report.num_views_with_upstreams += 1
+            yield self._create_upstream_lineage_workunit(
+                dataset_identifier, upstreams, fine_upstreams
+            )
 
     def _gen_workunits_from_query_result(
         self,
@@ -251,7 +251,7 @@ class SnowflakeLineageExtractor(
                     )
                     if result:
                         views_processed.add(view_identifier)
-                        yield self._gen_workunit_from_sql_parsing_result(
+                        yield from self._gen_workunit_from_sql_parsing_result(
                             view_identifier, result
                         )
                 self.report.view_lineage_parse_secs = timer.elapsed_seconds()
@@ -652,7 +652,9 @@ class SnowflakeLineageExtractor(
             # For now, populate only for S3
             if external_lineage_entry.startswith("s3://"):
                 external_upstream_table = UpstreamClass(
-                    dataset=make_s3_urn(external_lineage_entry, self.config.env),
+                    dataset=make_s3_urn_for_lineage(
+                        external_lineage_entry, self.config.env
+                    ),
                     type=DatasetLineageTypeClass.COPY,
                 )
                 external_upstreams.append(external_upstream_table)

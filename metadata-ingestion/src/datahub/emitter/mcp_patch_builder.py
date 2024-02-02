@@ -3,6 +3,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from typing import Any, Dict, Iterable, List, Optional
 
+from datahub.emitter.aspect import JSON_PATCH_CONTENT_TYPE
 from datahub.emitter.serialization_helper import pre_json_transform
 from datahub.metadata.schema_classes import (
     ChangeTypeClass,
@@ -11,6 +12,7 @@ from datahub.metadata.schema_classes import (
     MetadataChangeProposalClass,
     SystemMetadataClass,
 )
+from datahub.utilities.urns.urn import guess_entity_type
 
 
 def _recursive_to_obj(obj: Any) -> Any:
@@ -46,13 +48,11 @@ class MetadataPatchProposal:
     def __init__(
         self,
         urn: str,
-        entity_type: str,
         system_metadata: Optional[SystemMetadataClass] = None,
         audit_header: Optional[KafkaAuditHeaderClass] = None,
     ) -> None:
         self.urn = urn
-        # TODO: Remove the entity_type parameter, as MCPW can infer it from the URN.
-        self.entity_type = entity_type
+        self.entity_type = guess_entity_type(urn)
         self.system_metadata = system_metadata
         self.audit_header = audit_header
         self.patches = defaultdict(list)
@@ -72,7 +72,7 @@ class MetadataPatchProposal:
                     value=json.dumps(
                         pre_json_transform(_recursive_to_obj(patches))
                     ).encode(),
-                    contentType="application/json-patch+json",
+                    contentType=JSON_PATCH_CONTENT_TYPE,
                 ),
                 auditHeader=self.audit_header,
                 systemMetadata=self.system_metadata,

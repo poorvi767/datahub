@@ -2,7 +2,8 @@
 set -euxo pipefail
 
 if [ "$(uname)" == "Darwin" ]; then
-    brew install librdkafka
+    # None
+    true
 else
     sudo_cmd=""
     if command -v sudo; then
@@ -11,15 +12,15 @@ else
 
     if command -v yum; then
         $sudo_cmd yum install -y \
-            librdkafka-devel \
             openldap-devel \
             cyrus-sasl-devel \
             openldap-clients \
             sqlite-devel \
-            xz-devel
+            xz-devel \
+            libxml2-devel \
+            libxslt-devel
     else
         $sudo_cmd apt-get update && $sudo_cmd apt-get install -y \
-            librdkafka-dev \
             python3-ldap \
             libldap2-dev \
             libsasl2-dev \

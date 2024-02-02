@@ -1,3 +1,4 @@
+import json
 import re
 from typing import (
     Any,
@@ -26,6 +27,11 @@ from datahub.ingestion.graph.client import DatahubClientConfig, DataHubGraph
 from datahub.ingestion.run.pipeline import Pipeline
 from datahub.ingestion.transformer.add_dataset_browse_path import (
     AddDatasetBrowsePathTransformer,
+)
+from datahub.ingestion.transformer.add_dataset_dataproduct import (
+    AddDatasetDataProduct,
+    PatternAddDatasetDataProduct,
+    SimpleAddDatasetDataProduct,
 )
 from datahub.ingestion.transformer.add_dataset_ownership import (
     AddDatasetOwnership,
@@ -61,6 +67,10 @@ from datahub.ingestion.transformer.dataset_domain import (
     SimpleAddDatasetDomain,
 )
 from datahub.ingestion.transformer.dataset_transformer import DatasetTransformer
+from datahub.ingestion.transformer.extract_dataset_tags import ExtractDatasetTags
+from datahub.ingestion.transformer.extract_ownership_from_tags import (
+    ExtractOwnersFromTagsTransformer,
+)
 from datahub.ingestion.transformer.mark_dataset_status import MarkDatasetStatus
 from datahub.ingestion.transformer.remove_dataset_ownership import (
     SimpleRemoveDatasetOwnership,
@@ -71,6 +81,7 @@ from datahub.metadata.schema_classes import (
     GlobalTagsClass,
     MetadataChangeEventClass,
     OwnershipClass,
+    OwnershipTypeClass,
     StatusClass,
     TagAssociationClass,
 )
@@ -229,7 +240,7 @@ def test_simple_dataset_ownership_transformation(mock_time):
     assert last_event.entityUrn == outputs[0].record.proposedSnapshot.urn
     assert all(
         [
-            owner.type == models.OwnershipTypeClass.DATAOWNER
+            owner.type == models.OwnershipTypeClass.DATAOWNER and owner.typeUrn is None
             for owner in last_event.aspect.owners
         ]
     )
@@ -242,7 +253,7 @@ def test_simple_dataset_ownership_transformation(mock_time):
     assert len(second_ownership_aspect.owners) == 3
     assert all(
         [
-            owner.type == models.OwnershipTypeClass.DATAOWNER
+            owner.type == models.OwnershipTypeClass.DATAOWNER and owner.typeUrn is None
             for owner in second_ownership_aspect.owners
         ]
     )
@@ -286,6 +297,94 @@ def test_simple_dataset_ownership_with_type_transformation(mock_time):
     assert isinstance(ownership_aspect, OwnershipClass)
     assert len(ownership_aspect.owners) == 1
     assert ownership_aspect.owners[0].type == models.OwnershipTypeClass.PRODUCER
+
+
+def test_simple_dataset_ownership_with_type_urn_transformation(mock_time):
+    input = make_generic_dataset()
+
+    transformer = SimpleAddDatasetOwnership.create(
+        {
+            "owner_urns": [
+                builder.make_user_urn("person1"),
+            ],
+            "ownership_type": "urn:li:ownershipType:__system__technical_owner",
+        },
+        PipelineContext(run_id="test"),
+    )
+
+    output = list(
+        transformer.transform(
+            [
+                RecordEnvelope(input, metadata={}),
+                RecordEnvelope(EndOfStream(), metadata={}),
+            ]
+        )
+    )
+
+    assert len(output) == 3
+
+    # original MCE is unchanged
+    assert input == output[0].record
+
+    ownership_aspect = output[1].record.aspect
+
+    assert isinstance(ownership_aspect, OwnershipClass)
+    assert len(ownership_aspect.owners) == 1
+    assert ownership_aspect.owners[0].type == OwnershipTypeClass.CUSTOM
+    assert (
+        ownership_aspect.owners[0].typeUrn
+        == "urn:li:ownershipType:__system__technical_owner"
+    )
+
+
+def _test_extract_tags(in_urn: str, regex_str: str, out_tag: str) -> None:
+    input = make_generic_dataset(entity_urn=in_urn)
+    transformer = ExtractDatasetTags.create(
+        {
+            "extract_tags_from": "urn",
+            "extract_tags_regex": regex_str,
+            "semantics": "overwrite",
+        },
+        PipelineContext(run_id="test"),
+    )
+    output = list(
+        transformer.transform(
+            [
+                RecordEnvelope(input, metadata={}),
+                RecordEnvelope(EndOfStream(), metadata={}),
+            ]
+        )
+    )
+
+    assert len(output) == 3
+    assert output[0].record == input
+    tags_aspect = output[1].record.aspect
+    assert isinstance(tags_aspect, GlobalTagsClass)
+    assert len(tags_aspect.tags) == 1
+    assert tags_aspect.tags[0].tag == out_tag
+
+
+def test_extract_dataset_tags(mock_time):
+    _test_extract_tags(
+        in_urn="urn:li:dataset:(urn:li:dataPlatform:kafka,clusterid.part1-part2-part3_part4,PROD)",
+        regex_str="(.*)",
+        out_tag="urn:li:tag:clusterid.part1-part2-part3_part4",
+    )
+    _test_extract_tags(
+        in_urn="urn:li:dataset:(urn:li:dataPlatform:kafka,clusterid.USA-ops-team_table1,PROD)",
+        regex_str=".([^._]*)_",
+        out_tag="urn:li:tag:USA-ops-team",
+    )
+    _test_extract_tags(
+        in_urn="urn:li:dataset:(urn:li:dataPlatform:kafka,clusterid.Canada-marketing_table1,PROD)",
+        regex_str=".([^._]*)_",
+        out_tag="urn:li:tag:Canada-marketing",
+    )
+    _test_extract_tags(
+        in_urn="urn:li:dataset:(urn:li:dataPlatform:elasticsearch,abcdef-prefix_datahub_usage_event-000027,PROD)",
+        regex_str="([^._]*)_",
+        out_tag="urn:li:tag:abcdef-prefix",
+    )
 
 
 def test_simple_dataset_ownership_with_invalid_type_transformation(mock_time):
@@ -535,6 +634,108 @@ def test_mark_status_dataset(tmp_path):
     )
 
 
+def test_extract_owners_from_tags():
+    def _test_owner(
+        tag: str,
+        config: Dict,
+        expected_owner: str,
+        expected_owner_type: Optional[str] = None,
+    ) -> None:
+        dataset = make_generic_dataset(
+            aspects=[
+                models.GlobalTagsClass(
+                    tags=[TagAssociationClass(tag=builder.make_tag_urn(tag))]
+                )
+            ]
+        )
+
+        transformer = ExtractOwnersFromTagsTransformer.create(
+            config,
+            PipelineContext(run_id="test"),
+        )
+
+        record_envelops: List[RecordEnvelope] = list(
+            transformer.transform(
+                [
+                    RecordEnvelope(dataset, metadata={}),
+                    RecordEnvelope(record=EndOfStream(), metadata={}),
+                ]
+            )
+        )
+
+        assert len(record_envelops) == 3
+
+        mcp: MetadataChangeProposalWrapper = record_envelops[1].record
+
+        owners_aspect = cast(OwnershipClass, mcp.aspect)
+
+        owners = owners_aspect.owners
+
+        owner = owners[0]
+
+        assert expected_owner_type is not None
+
+        assert owner.type == expected_owner_type
+
+        assert owner.owner == expected_owner
+
+    _test_owner(
+        tag="owner:foo",
+        config={
+            "tag_prefix": "owner:",
+        },
+        expected_owner="urn:li:corpuser:foo",
+        expected_owner_type=OwnershipTypeClass.TECHNICAL_OWNER,
+    )
+    _test_owner(
+        tag="abcdef-owner:foo",
+        config={
+            "tag_prefix": ".*owner:",
+        },
+        expected_owner="urn:li:corpuser:foo",
+        expected_owner_type=OwnershipTypeClass.TECHNICAL_OWNER,
+    )
+    _test_owner(
+        tag="owner:foo",
+        config={
+            "tag_prefix": "owner:",
+            "is_user": False,
+        },
+        expected_owner="urn:li:corpGroup:foo",
+        expected_owner_type=OwnershipTypeClass.TECHNICAL_OWNER,
+    )
+    _test_owner(
+        tag="owner:foo",
+        config={
+            "tag_prefix": "owner:",
+            "email_domain": "example.com",
+        },
+        expected_owner="urn:li:corpuser:foo@example.com",
+        expected_owner_type=OwnershipTypeClass.TECHNICAL_OWNER,
+    )
+    _test_owner(
+        tag="owner:foo",
+        config={
+            "tag_prefix": "owner:",
+            "email_domain": "example.com",
+            "owner_type": "TECHNICAL_OWNER",
+        },
+        expected_owner="urn:li:corpuser:foo@example.com",
+        expected_owner_type=OwnershipTypeClass.TECHNICAL_OWNER,
+    )
+    _test_owner(
+        tag="owner:foo",
+        config={
+            "tag_prefix": "owner:",
+            "email_domain": "example.com",
+            "owner_type": "AUTHOR",
+            "owner_type_urn": "urn:li:ownershipType:ad8557d6-dcb9-4d2a-83fc-b7d0d54f3e0f",
+        },
+        expected_owner="urn:li:corpuser:foo@example.com",
+        expected_owner_type=OwnershipTypeClass.CUSTOM,
+    )
+
+
 def test_add_dataset_browse_paths():
     dataset = make_generic_dataset()
 
@@ -635,13 +836,25 @@ def test_simple_dataset_tags_transformation(mock_time):
             ]
         )
     )
-    assert len(outputs) == 3
+
+    assert len(outputs) == 5
 
     # Check that tags were added.
     tags_aspect = outputs[1].record.aspect
+    assert tags_aspect.tags[0].tag == builder.make_tag_urn("NeedsDocumentation")
     assert tags_aspect
     assert len(tags_aspect.tags) == 2
-    assert tags_aspect.tags[0].tag == builder.make_tag_urn("NeedsDocumentation")
+
+    # Check new tag entity should be there
+    assert outputs[2].record.aspectName == "tagKey"
+    assert outputs[2].record.aspect.name == "NeedsDocumentation"
+    assert outputs[2].record.entityUrn == builder.make_tag_urn("NeedsDocumentation")
+
+    assert outputs[3].record.aspectName == "tagKey"
+    assert outputs[3].record.aspect.name == "Legacy"
+    assert outputs[3].record.entityUrn == builder.make_tag_urn("Legacy")
+
+    assert isinstance(outputs[4].record, EndOfStream)
 
 
 def dummy_tag_resolver_method(dataset_snapshot):
@@ -675,7 +888,7 @@ def test_pattern_dataset_tags_transformation(mock_time):
         )
     )
 
-    assert len(outputs) == 3
+    assert len(outputs) == 5
     tags_aspect = outputs[1].record.aspect
     assert tags_aspect
     assert len(tags_aspect.tags) == 2
@@ -683,7 +896,7 @@ def test_pattern_dataset_tags_transformation(mock_time):
     assert builder.make_tag_urn("Needs Documentation") not in tags_aspect.tags
 
 
-def test_import_resolver():
+def test_add_dataset_tags_transformation():
     transformer = AddDatasetTags.create(
         {
             "get_tags_to_add": "tests.unit.test_transform_dataset.dummy_tag_resolver_method"
@@ -743,6 +956,7 @@ def test_pattern_dataset_ownership_transformation(mock_time):
                     ".*example2.*": [builder.make_user_urn("person2")],
                 }
             },
+            "ownership_type": "DATAOWNER",
         },
         PipelineContext(run_id="test"),
     )
@@ -1184,7 +1398,7 @@ def test_mcp_add_tags_missing(mock_time):
     ]
     input_stream.append(RecordEnvelope(record=EndOfStream(), metadata={}))
     outputs = list(transformer.transform(input_stream))
-    assert len(outputs) == 3
+    assert len(outputs) == 5
     assert outputs[0].record == dataset_mcp
     # Check that tags were added, this will be the second result
     tags_aspect = outputs[1].record.aspect
@@ -1216,13 +1430,23 @@ def test_mcp_add_tags_existing(mock_time):
     ]
     input_stream.append(RecordEnvelope(record=EndOfStream(), metadata={}))
     outputs = list(transformer.transform(input_stream))
-    assert len(outputs) == 2
+
+    assert len(outputs) == 4
+
     # Check that tags were added, this will be the second result
     tags_aspect = outputs[0].record.aspect
     assert tags_aspect
     assert len(tags_aspect.tags) == 3
     assert tags_aspect.tags[0].tag == builder.make_tag_urn("Test")
     assert tags_aspect.tags[1].tag == builder.make_tag_urn("NeedsDocumentation")
+    assert tags_aspect.tags[2].tag == builder.make_tag_urn("Legacy")
+
+    # Check tag entities got added
+    assert outputs[1].record.entityType == "tag"
+    assert outputs[1].record.entityUrn == builder.make_tag_urn("NeedsDocumentation")
+    assert outputs[2].record.entityType == "tag"
+    assert outputs[2].record.entityUrn == builder.make_tag_urn("Legacy")
+
     assert isinstance(outputs[-1].record, EndOfStream)
 
 
@@ -2093,6 +2317,7 @@ def test_simple_dataset_ownership_transformer_semantics_patch(mock_datahub_graph
             "replace_existing": False,
             "semantics": TransformerSemantics.PATCH,
             "owner_urns": [owner2],
+            "ownership_type": "DATAOWNER",
         },
         pipeline_context=pipeline_context,
     )
@@ -2463,3 +2688,156 @@ def test_pattern_dataset_schema_tags_transformation_patch(
     assert builder.make_tag_urn("pii") in global_tags_urn
     assert builder.make_tag_urn("FirstName") in global_tags_urn
     assert builder.make_tag_urn("Name") in global_tags_urn
+
+
+def test_simple_dataset_data_product_transformation(mock_time):
+    transformer = SimpleAddDatasetDataProduct.create(
+        {
+            "dataset_to_data_product_urns": {
+                builder.make_dataset_urn(
+                    "bigquery", "example1"
+                ): "urn:li:dataProduct:first",
+                builder.make_dataset_urn(
+                    "bigquery", "example2"
+                ): "urn:li:dataProduct:second",
+                builder.make_dataset_urn(
+                    "bigquery", "example3"
+                ): "urn:li:dataProduct:first",
+            }
+        },
+        PipelineContext(run_id="test-dataproduct"),
+    )
+
+    outputs = list(
+        transformer.transform(
+            [
+                RecordEnvelope(input, metadata={})
+                for input in [
+                    make_generic_dataset(
+                        entity_urn=builder.make_dataset_urn("bigquery", "example1")
+                    ),
+                    make_generic_dataset(
+                        entity_urn=builder.make_dataset_urn("bigquery", "example2")
+                    ),
+                    make_generic_dataset(
+                        entity_urn=builder.make_dataset_urn("bigquery", "example3")
+                    ),
+                    EndOfStream(),
+                ]
+            ]
+        )
+    )
+
+    assert len(outputs) == 6
+
+    # Check new dataproduct entity should be there
+    assert outputs[3].record.entityUrn == "urn:li:dataProduct:first"
+    assert outputs[3].record.aspectName == "dataProductProperties"
+
+    first_data_product_aspect = json.loads(
+        outputs[3].record.aspect.value.decode("utf-8")
+    )
+    assert [item["value"]["destinationUrn"] for item in first_data_product_aspect] == [
+        builder.make_dataset_urn("bigquery", "example1"),
+        builder.make_dataset_urn("bigquery", "example3"),
+    ]
+
+    second_data_product_aspect = json.loads(
+        outputs[4].record.aspect.value.decode("utf-8")
+    )
+    assert [item["value"]["destinationUrn"] for item in second_data_product_aspect] == [
+        builder.make_dataset_urn("bigquery", "example2")
+    ]
+
+    assert isinstance(outputs[5].record, EndOfStream)
+
+
+def test_pattern_dataset_data_product_transformation(mock_time):
+    transformer = PatternAddDatasetDataProduct.create(
+        {
+            "dataset_to_data_product_urns_pattern": {
+                "rules": {
+                    ".*example1.*": "urn:li:dataProduct:first",
+                    ".*": "urn:li:dataProduct:second",
+                }
+            },
+        },
+        PipelineContext(run_id="test-dataproducts"),
+    )
+
+    outputs = list(
+        transformer.transform(
+            [
+                RecordEnvelope(input, metadata={})
+                for input in [
+                    make_generic_dataset(
+                        entity_urn=builder.make_dataset_urn("bigquery", "example1")
+                    ),
+                    make_generic_dataset(
+                        entity_urn=builder.make_dataset_urn("bigquery", "example2")
+                    ),
+                    make_generic_dataset(
+                        entity_urn=builder.make_dataset_urn("bigquery", "example3")
+                    ),
+                    EndOfStream(),
+                ]
+            ]
+        )
+    )
+
+    assert len(outputs) == 6
+
+    # Check new dataproduct entity should be there
+    assert outputs[3].record.entityUrn == "urn:li:dataProduct:first"
+    assert outputs[3].record.aspectName == "dataProductProperties"
+
+    first_data_product_aspect = json.loads(
+        outputs[3].record.aspect.value.decode("utf-8")
+    )
+    assert [item["value"]["destinationUrn"] for item in first_data_product_aspect] == [
+        builder.make_dataset_urn("bigquery", "example1")
+    ]
+
+    second_data_product_aspect = json.loads(
+        outputs[4].record.aspect.value.decode("utf-8")
+    )
+    assert [item["value"]["destinationUrn"] for item in second_data_product_aspect] == [
+        builder.make_dataset_urn("bigquery", "example2"),
+        builder.make_dataset_urn("bigquery", "example3"),
+    ]
+
+    assert isinstance(outputs[5].record, EndOfStream)
+
+
+def dummy_data_product_resolver_method(dataset_urn):
+    dataset_to_data_product_map = {
+        builder.make_dataset_urn("bigquery", "example1"): "urn:li:dataProduct:first"
+    }
+    return dataset_to_data_product_map.get(dataset_urn)
+
+
+def test_add_dataset_data_product_transformation():
+    transformer = AddDatasetDataProduct.create(
+        {
+            "get_data_product_to_add": "tests.unit.test_transform_dataset.dummy_data_product_resolver_method"
+        },
+        PipelineContext(run_id="test-dataproduct"),
+    )
+    outputs = list(
+        transformer.transform(
+            [
+                RecordEnvelope(input, metadata={})
+                for input in [make_generic_dataset(), EndOfStream()]
+            ]
+        )
+    )
+    # Check new dataproduct entity should be there
+    assert outputs[1].record.entityUrn == "urn:li:dataProduct:first"
+    assert outputs[1].record.aspectName == "dataProductProperties"
+
+    first_data_product_aspect = json.loads(
+        outputs[1].record.aspect.value.decode("utf-8")
+    )
+    assert [item["value"]["destinationUrn"] for item in first_data_product_aspect] == [
+        builder.make_dataset_urn("bigquery", "example1")
+    ]

@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from time import sleep
 from typing import Dict, Iterable, List, Optional, Union
 
+import nest_asyncio
 from okta.client import Client as OktaClient
 from okta.exceptions import OktaAPIException
 from okta.models import Group, GroupProfile, User, UserProfile, UserStatus
@@ -51,6 +52,7 @@ from datahub.metadata.schema_classes import (
 )
 
 logger = logging.getLogger(__name__)
+nest_asyncio.apply()
 
 
 class OktaConfig(StatefulIngestionConfigBase, ConfigModel):
@@ -137,6 +139,10 @@ class OktaConfig(StatefulIngestionConfigBase, ConfigModel):
     okta_groups_search: Optional[str] = Field(
         default=None,
         description="Okta search expression (not regex) for ingesting groups. Only one of `okta_groups_filter` and `okta_groups_search` can be set. See (https://developer.okta.com/docs/reference/api/groups/#list-groups-with-search) for more info.",
+    )
+    skip_users_without_a_group: bool = Field(
+        default=False,
+        description="Whether to only ingest users that are members of groups. If this is set to False, all users will be ingested regardless of group membership.",
     )
 
     # Configuration for stateful ingestion
@@ -301,11 +307,13 @@ class OktaSource(StatefulIngestionSourceBase):
         # This method can be called on the main thread or an async thread, so we must create a new loop if one doesn't exist
         # See https://docs.python.org/3/library/asyncio-eventloop.html for more info.
 
+        created_event_loop = False
         try:
             event_loop: asyncio.AbstractEventLoop = asyncio.get_event_loop()
         except RuntimeError:
             event_loop = asyncio.new_event_loop()
             asyncio.set_event_loop(event_loop)
+            created_event_loop = True
 
         # Step 1: Produce MetadataWorkUnits for CorpGroups.
         okta_groups: Optional[Iterable[Group]] = None
@@ -383,6 +391,15 @@ class OktaSource(StatefulIngestionSourceBase):
                         datahub_corp_user_snapshot.urn
                     ]
                 )
+                if (
+                    self.config.skip_users_without_a_group
+                    and len(datahub_group_membership.groups) == 0
+                ):
+                    logger.debug(
+                        f"Filtering {datahub_corp_user_snapshot.urn} due to group filter"
+                    )
+                    self.report.report_filtered(datahub_corp_user_snapshot.urn)
+                    continue
                 assert datahub_group_membership is not None
                 datahub_corp_user_snapshot.aspects.append(datahub_group_membership)
                 mce = MetadataChangeEvent(proposedSnapshot=datahub_corp_user_snapshot)
@@ -406,7 +423,8 @@ class OktaSource(StatefulIngestionSourceBase):
                 ).as_workunit()
 
         # Step 4: Close the event loop
-        event_loop.close()
+        if created_event_loop:
+            event_loop.close()
 
     def get_report(self):
         return self.report

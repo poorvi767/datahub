@@ -36,6 +36,9 @@ import {
     Embed,
     FabricType,
     BrowsePathV2,
+    DataJobInputOutput,
+    ParentDomainsResult,
+    StructuredProperties,
 } from '../../../types.generated';
 import { FetchedEntity } from '../../lineage/types';
 
@@ -47,6 +50,8 @@ export type EntityTab = {
         enabled: (GenericEntityProperties, T) => boolean; // Whether the tab is enabled on the UI. Defaults to true.
     };
     properties?: any;
+    id?: string;
+    getDynamicName?: (GenericEntityProperties, T) => string;
 };
 
 export type EntitySidebarSection = {
@@ -63,8 +68,10 @@ export type EntitySubHeaderSection = {
 
 export type GenericEntityProperties = {
     urn?: string;
+    type?: EntityType;
     name?: Maybe<string>;
     properties?: Maybe<{
+        name?: Maybe<string>;
         description?: Maybe<string>;
         qualifiedName?: Maybe<string>;
         sourceUrl?: Maybe<string>;
@@ -78,6 +85,7 @@ export type GenericEntityProperties = {
     platform?: Maybe<DataPlatform>;
     dataPlatformInstance?: Maybe<DataPlatformInstance>;
     customProperties?: Maybe<CustomPropertiesEntry[]>;
+    structuredProperties?: Maybe<StructuredProperties>;
     institutionalMemory?: Maybe<InstitutionalMemory>;
     schemaMetadata?: Maybe<SchemaMetadata>;
     externalUrl?: Maybe<string>;
@@ -96,6 +104,7 @@ export type GenericEntityProperties = {
     status?: Maybe<Status>;
     deprecation?: Maybe<Deprecation>;
     parentContainers?: Maybe<ParentContainersResult>;
+    parentDomains?: Maybe<ParentDomainsResult>;
     children?: Maybe<EntityRelationshipsResult>;
     parentNodes?: Maybe<ParentNodesResult>;
     isAChildren?: Maybe<EntityRelationshipsResult>;
@@ -109,6 +118,7 @@ export type GenericEntityProperties = {
     exists?: boolean;
     origin?: Maybe<FabricType>;
     browsePathV2?: Maybe<BrowsePathV2>;
+    inputOutput?: Maybe<DataJobInputOutput>;
 };
 
 export type GenericEntityUpdate = {

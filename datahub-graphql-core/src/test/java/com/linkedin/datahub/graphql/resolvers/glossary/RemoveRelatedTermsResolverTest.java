@@ -1,5 +1,10 @@
 package com.linkedin.datahub.graphql.resolvers.glossary;
 
+import static com.linkedin.datahub.graphql.TestUtils.*;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.testng.Assert.assertThrows;
+import static org.testng.Assert.assertTrue;
+
 import com.google.common.collect.ImmutableList;
 import com.linkedin.common.GlossaryTermUrnArray;
 import com.linkedin.common.urn.GlossaryTermUrn;
@@ -12,15 +17,10 @@ import com.linkedin.glossary.GlossaryRelatedTerms;
 import com.linkedin.metadata.Constants;
 import com.linkedin.metadata.entity.EntityService;
 import graphql.schema.DataFetchingEnvironment;
-import org.mockito.Mockito;
-import org.testng.annotations.Test;
-
 import java.util.Arrays;
 import java.util.concurrent.ExecutionException;
-
-import static com.linkedin.datahub.graphql.TestUtils.*;
-import static org.testng.Assert.assertThrows;
-import static org.testng.Assert.assertTrue;
+import org.mockito.Mockito;
+import org.testng.annotations.Test;
 
 public class RemoveRelatedTermsResolverTest {
 
@@ -34,30 +34,31 @@ public class RemoveRelatedTermsResolverTest {
     GlossaryTermUrn term2Urn = GlossaryTermUrn.createFromString(TEST_TERM_2_URN);
     final GlossaryRelatedTerms relatedTerms = new GlossaryRelatedTerms();
     relatedTerms.setIsRelatedTerms(new GlossaryTermUrnArray(Arrays.asList(term1Urn, term2Urn)));
-    EntityService mockService = Mockito.mock(EntityService.class);
-    Mockito.when(mockService.getAspect(
-            Mockito.eq(UrnUtils.getUrn(TEST_ENTITY_URN)),
-            Mockito.eq(Constants.GLOSSARY_RELATED_TERM_ASPECT_NAME),
-            Mockito.eq(0L)))
+    EntityService mockService = getMockEntityService();
+    Mockito.when(
+            mockService.getAspect(
+                Mockito.eq(UrnUtils.getUrn(TEST_ENTITY_URN)),
+                Mockito.eq(Constants.GLOSSARY_RELATED_TERM_ASPECT_NAME),
+                Mockito.eq(0L)))
         .thenReturn(relatedTerms);
 
-    Mockito.when(mockService.exists(Urn.createFromString(TEST_ENTITY_URN))).thenReturn(true);
+    Mockito.when(mockService.exists(eq(Urn.createFromString(TEST_ENTITY_URN)), eq(true)))
+        .thenReturn(true);
 
     RemoveRelatedTermsResolver resolver = new RemoveRelatedTermsResolver(mockService);
 
     QueryContext mockContext = getMockAllowContext();
     DataFetchingEnvironment mockEnv = Mockito.mock(DataFetchingEnvironment.class);
-    RelatedTermsInput input = new RelatedTermsInput(TEST_ENTITY_URN, ImmutableList.of(
-        TEST_TERM_1_URN
-    ), TermRelationshipType.isA);
+    RelatedTermsInput input =
+        new RelatedTermsInput(
+            TEST_ENTITY_URN, ImmutableList.of(TEST_TERM_1_URN), TermRelationshipType.isA);
     Mockito.when(mockEnv.getArgument(Mockito.eq("input"))).thenReturn(input);
     Mockito.when(mockEnv.getContext()).thenReturn(mockContext);
 
     assertTrue(resolver.get(mockEnv).get());
-    verifyIngestProposal(mockService, 1);
-    Mockito.verify(mockService, Mockito.times(1)).exists(
-        Mockito.eq(Urn.createFromString(TEST_ENTITY_URN))
-    );
+    verifySingleIngestProposal(mockService, 1);
+    Mockito.verify(mockService, Mockito.times(1))
+        .exists(Mockito.eq(Urn.createFromString(TEST_ENTITY_URN)), eq(true));
   }
 
   @Test
@@ -66,50 +67,53 @@ public class RemoveRelatedTermsResolverTest {
     GlossaryTermUrn term2Urn = GlossaryTermUrn.createFromString(TEST_TERM_2_URN);
     final GlossaryRelatedTerms relatedTerms = new GlossaryRelatedTerms();
     relatedTerms.setHasRelatedTerms(new GlossaryTermUrnArray(Arrays.asList(term1Urn, term2Urn)));
-    EntityService mockService = Mockito.mock(EntityService.class);
-    Mockito.when(mockService.getAspect(
-            Mockito.eq(UrnUtils.getUrn(TEST_ENTITY_URN)),
-            Mockito.eq(Constants.GLOSSARY_RELATED_TERM_ASPECT_NAME),
-            Mockito.eq(0L)))
+    EntityService mockService = getMockEntityService();
+    Mockito.when(
+            mockService.getAspect(
+                Mockito.eq(UrnUtils.getUrn(TEST_ENTITY_URN)),
+                Mockito.eq(Constants.GLOSSARY_RELATED_TERM_ASPECT_NAME),
+                Mockito.eq(0L)))
         .thenReturn(relatedTerms);
 
-    Mockito.when(mockService.exists(Urn.createFromString(TEST_ENTITY_URN))).thenReturn(true);
+    Mockito.when(mockService.exists(eq(Urn.createFromString(TEST_ENTITY_URN)), eq(true)))
+        .thenReturn(true);
 
     RemoveRelatedTermsResolver resolver = new RemoveRelatedTermsResolver(mockService);
 
     QueryContext mockContext = getMockAllowContext();
     DataFetchingEnvironment mockEnv = Mockito.mock(DataFetchingEnvironment.class);
-    RelatedTermsInput input = new RelatedTermsInput(TEST_ENTITY_URN, ImmutableList.of(
-        TEST_TERM_1_URN
-    ), TermRelationshipType.hasA);
+    RelatedTermsInput input =
+        new RelatedTermsInput(
+            TEST_ENTITY_URN, ImmutableList.of(TEST_TERM_1_URN), TermRelationshipType.hasA);
     Mockito.when(mockEnv.getArgument(Mockito.eq("input"))).thenReturn(input);
     Mockito.when(mockEnv.getContext()).thenReturn(mockContext);
 
     assertTrue(resolver.get(mockEnv).get());
-    verifyIngestProposal(mockService, 1);
-    Mockito.verify(mockService, Mockito.times(1)).exists(
-        Mockito.eq(Urn.createFromString(TEST_ENTITY_URN))
-    );
+    verifySingleIngestProposal(mockService, 1);
+    Mockito.verify(mockService, Mockito.times(1))
+        .exists(Mockito.eq(Urn.createFromString(TEST_ENTITY_URN)), eq(true));
   }
 
   @Test
   public void testFailAspectDoesNotExist() throws Exception {
-    EntityService mockService = Mockito.mock(EntityService.class);
-    Mockito.when(mockService.getAspect(
-            Mockito.eq(UrnUtils.getUrn(TEST_ENTITY_URN)),
-            Mockito.eq(Constants.GLOSSARY_RELATED_TERM_ASPECT_NAME),
-            Mockito.eq(0L)))
+    EntityService mockService = getMockEntityService();
+    Mockito.when(
+            mockService.getAspect(
+                Mockito.eq(UrnUtils.getUrn(TEST_ENTITY_URN)),
+                Mockito.eq(Constants.GLOSSARY_RELATED_TERM_ASPECT_NAME),
+                Mockito.eq(0L)))
         .thenReturn(null);
 
-    Mockito.when(mockService.exists(Urn.createFromString(TEST_ENTITY_URN))).thenReturn(true);
+    Mockito.when(mockService.exists(eq(Urn.createFromString(TEST_ENTITY_URN)), eq(true)))
+        .thenReturn(true);
 
     RemoveRelatedTermsResolver resolver = new RemoveRelatedTermsResolver(mockService);
 
     QueryContext mockContext = getMockAllowContext();
     DataFetchingEnvironment mockEnv = Mockito.mock(DataFetchingEnvironment.class);
-    RelatedTermsInput input = new RelatedTermsInput(TEST_ENTITY_URN, ImmutableList.of(
-        TEST_TERM_1_URN
-    ), TermRelationshipType.hasA);
+    RelatedTermsInput input =
+        new RelatedTermsInput(
+            TEST_ENTITY_URN, ImmutableList.of(TEST_TERM_1_URN), TermRelationshipType.hasA);
     Mockito.when(mockEnv.getArgument(Mockito.eq("input"))).thenReturn(input);
     Mockito.when(mockEnv.getContext()).thenReturn(mockContext);
 
@@ -123,29 +127,30 @@ public class RemoveRelatedTermsResolverTest {
     GlossaryTermUrn term2Urn = GlossaryTermUrn.createFromString(TEST_TERM_2_URN);
     final GlossaryRelatedTerms relatedTerms = new GlossaryRelatedTerms();
     relatedTerms.setIsRelatedTerms(new GlossaryTermUrnArray(Arrays.asList(term1Urn, term2Urn)));
-    EntityService mockService = Mockito.mock(EntityService.class);
-    Mockito.when(mockService.getAspect(
-            Mockito.eq(UrnUtils.getUrn(TEST_ENTITY_URN)),
-            Mockito.eq(Constants.GLOSSARY_RELATED_TERM_ASPECT_NAME),
-            Mockito.eq(0L)))
+    EntityService mockService = getMockEntityService();
+    Mockito.when(
+            mockService.getAspect(
+                Mockito.eq(UrnUtils.getUrn(TEST_ENTITY_URN)),
+                Mockito.eq(Constants.GLOSSARY_RELATED_TERM_ASPECT_NAME),
+                Mockito.eq(0L)))
         .thenReturn(relatedTerms);
 
-    Mockito.when(mockService.exists(Urn.createFromString(TEST_ENTITY_URN))).thenReturn(true);
+    Mockito.when(mockService.exists(eq(Urn.createFromString(TEST_ENTITY_URN)), eq(true)))
+        .thenReturn(true);
 
     RemoveRelatedTermsResolver resolver = new RemoveRelatedTermsResolver(mockService);
 
     QueryContext mockContext = getMockDenyContext();
     DataFetchingEnvironment mockEnv = Mockito.mock(DataFetchingEnvironment.class);
-    RelatedTermsInput input = new RelatedTermsInput(TEST_ENTITY_URN, ImmutableList.of(
-        TEST_TERM_1_URN
-    ), TermRelationshipType.isA);
+    RelatedTermsInput input =
+        new RelatedTermsInput(
+            TEST_ENTITY_URN, ImmutableList.of(TEST_TERM_1_URN), TermRelationshipType.isA);
     Mockito.when(mockEnv.getArgument(Mockito.eq("input"))).thenReturn(input);
     Mockito.when(mockEnv.getContext()).thenReturn(mockContext);
 
     assertThrows(ExecutionException.class, () -> resolver.get(mockEnv).get());
     verifyNoIngestProposal(mockService);
-    Mockito.verify(mockService, Mockito.times(0)).exists(
-        Mockito.eq(Urn.createFromString(TEST_ENTITY_URN))
-    );
+    Mockito.verify(mockService, Mockito.times(0))
+        .exists(Mockito.eq(Urn.createFromString(TEST_ENTITY_URN)), eq(true));
   }
 }

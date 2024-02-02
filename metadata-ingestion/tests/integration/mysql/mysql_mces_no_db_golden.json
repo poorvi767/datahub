@@ -16,7 +16,8 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -31,7 +32,8 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -46,7 +48,8 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -63,7 +66,24 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
+    }
+},
+{
+    "entityType": "container",
+    "entityUrn": "urn:li:container:0f72a1bc79da282eb614cc089c0ba302",
+    "changeType": "UPSERT",
+    "aspectName": "browsePathsV2",
+    "aspect": {
+        "json": {
+            "path": []
+        }
+    },
+    "systemMetadata": {
+        "lastObserved": 1586847600000,
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -78,7 +98,8 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -198,7 +219,8 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -215,7 +237,29 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
+    }
+},
+{
+    "entityType": "dataset",
+    "entityUrn": "urn:li:dataset:(urn:li:dataPlatform:mysql,dataCharmer.employees,PROD)",
+    "changeType": "UPSERT",
+    "aspectName": "browsePathsV2",
+    "aspect": {
+        "json": {
+            "path": [
+                {
+                    "id": "urn:li:container:0f72a1bc79da282eb614cc089c0ba302",
+                    "urn": "urn:li:container:0f72a1bc79da282eb614cc089c0ba302"
+                }
+            ]
+        }
+    },
+    "systemMetadata": {
+        "lastObserved": 1586847600000,
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -230,7 +274,8 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -326,7 +371,8 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -343,7 +389,29 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
+    }
+},
+{
+    "entityType": "dataset",
+    "entityUrn": "urn:li:dataset:(urn:li:dataPlatform:mysql,dataCharmer.salaries,PROD)",
+    "changeType": "UPSERT",
+    "aspectName": "browsePathsV2",
+    "aspect": {
+        "json": {
+            "path": [
+                {
+                    "id": "urn:li:container:0f72a1bc79da282eb614cc089c0ba302",
+                    "urn": "urn:li:container:0f72a1bc79da282eb614cc089c0ba302"
+                }
+            ]
+        }
+    },
+    "systemMetadata": {
+        "lastObserved": 1586847600000,
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -499,7 +567,8 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -914,7 +983,8 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -934,7 +1004,8 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -949,7 +1020,8 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -964,7 +1036,8 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -981,7 +1054,8 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -998,7 +1072,24 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
+    }
+},
+{
+    "entityType": "container",
+    "entityUrn": "urn:li:container:17751259af32dd0385cad799df608c40",
+    "changeType": "UPSERT",
+    "aspectName": "browsePathsV2",
+    "aspect": {
+        "json": {
+            "path": []
+        }
+    },
+    "systemMetadata": {
+        "lastObserved": 1586847600000,
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -1013,7 +1104,8 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -1145,7 +1237,8 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -1162,7 +1255,8 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -1179,7 +1273,29 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
+    }
+},
+{
+    "entityType": "dataset",
+    "entityUrn": "urn:li:dataset:(urn:li:dataPlatform:mysql,metagalaxy.metadata_aspect,PROD)",
+    "changeType": "UPSERT",
+    "aspectName": "browsePathsV2",
+    "aspect": {
+        "json": {
+            "path": [
+                {
+                    "id": "urn:li:container:17751259af32dd0385cad799df608c40",
+                    "urn": "urn:li:container:17751259af32dd0385cad799df608c40"
+                }
+            ]
+        }
+    },
+    "systemMetadata": {
+        "lastObserved": 1586847600000,
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -1194,7 +1310,8 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -1328,7 +1445,8 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -1345,7 +1463,8 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -1362,7 +1481,29 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
+    }
+},
+{
+    "entityType": "dataset",
+    "entityUrn": "urn:li:dataset:(urn:li:dataPlatform:mysql,metagalaxy.metadata_index,PROD)",
+    "changeType": "UPSERT",
+    "aspectName": "browsePathsV2",
+    "aspect": {
+        "json": {
+            "path": [
+                {
+                    "id": "urn:li:container:17751259af32dd0385cad799df608c40",
+                    "urn": "urn:li:container:17751259af32dd0385cad799df608c40"
+                }
+            ]
+        }
+    },
+    "systemMetadata": {
+        "lastObserved": 1586847600000,
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -1377,7 +1518,8 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -1476,7 +1618,8 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -1493,7 +1636,8 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -1510,7 +1654,8 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -1527,7 +1672,29 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
+    }
+},
+{
+    "entityType": "dataset",
+    "entityUrn": "urn:li:dataset:(urn:li:dataPlatform:mysql,metagalaxy.metadata_index_view,PROD)",
+    "changeType": "UPSERT",
+    "aspectName": "browsePathsV2",
+    "aspect": {
+        "json": {
+            "path": [
+                {
+                    "id": "urn:li:container:17751259af32dd0385cad799df608c40",
+                    "urn": "urn:li:container:17751259af32dd0385cad799df608c40"
+                }
+            ]
+        }
+    },
+    "systemMetadata": {
+        "lastObserved": 1586847600000,
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -1547,7 +1714,8 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -1562,7 +1730,8 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -1577,7 +1746,8 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -1594,7 +1764,24 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
+    }
+},
+{
+    "entityType": "container",
+    "entityUrn": "urn:li:container:dc2ae101b66746b9c2b6df8ee89ca88f",
+    "changeType": "UPSERT",
+    "aspectName": "browsePathsV2",
+    "aspect": {
+        "json": {
+            "path": []
+        }
+    },
+    "systemMetadata": {
+        "lastObserved": 1586847600000,
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -1609,7 +1796,8 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -1729,7 +1917,8 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -1746,7 +1935,29 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
+    }
+},
+{
+    "entityType": "dataset",
+    "entityUrn": "urn:li:dataset:(urn:li:dataPlatform:mysql,northwind.customers,PROD)",
+    "changeType": "UPSERT",
+    "aspectName": "browsePathsV2",
+    "aspect": {
+        "json": {
+            "path": [
+                {
+                    "id": "urn:li:container:dc2ae101b66746b9c2b6df8ee89ca88f",
+                    "urn": "urn:li:container:dc2ae101b66746b9c2b6df8ee89ca88f"
+                }
+            ]
+        }
+    },
+    "systemMetadata": {
+        "lastObserved": 1586847600000,
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -1761,7 +1972,8 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -1857,7 +2069,8 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -1874,7 +2087,29 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
+    }
+},
+{
+    "entityType": "dataset",
+    "entityUrn": "urn:li:dataset:(urn:li:dataPlatform:mysql,northwind.orders,PROD)",
+    "changeType": "UPSERT",
+    "aspectName": "browsePathsV2",
+    "aspect": {
+        "json": {
+            "path": [
+                {
+                    "id": "urn:li:container:dc2ae101b66746b9c2b6df8ee89ca88f",
+                    "urn": "urn:li:container:dc2ae101b66746b9c2b6df8ee89ca88f"
+                }
+            ]
+        }
+    },
+    "systemMetadata": {
+        "lastObserved": 1586847600000,
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -1997,7 +2232,8 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -2018,37 +2254,25 @@
                 {
                     "fieldPath": "id",
                     "uniqueCount": 0,
-                    "nullCount": 0,
-                    "min": "None",
-                    "max": "None",
-                    "mean": "None",
-                    "median": "None",
-                    "stdev": "0.0",
-                    "sampleValues": []
+                    "nullCount": 0
                 },
                 {
                     "fieldPath": "description",
                     "uniqueCount": 0,
-                    "nullCount": 0,
-                    "sampleValues": []
+                    "nullCount": 0
                 },
                 {
                     "fieldPath": "customer_id",
                     "uniqueCount": 0,
-                    "nullCount": 0,
-                    "min": "None",
-                    "max": "None",
-                    "mean": "None",
-                    "median": "None",
-                    "stdev": "0.0",
-                    "sampleValues": []
+                    "nullCount": 0
                 }
             ]
         }
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -2068,7 +2292,8 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -2083,7 +2308,8 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -2098,7 +2324,8 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -2115,7 +2342,24 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
+    }
+},
+{
+    "entityType": "container",
+    "entityUrn": "urn:li:container:28176129fe1c0e526e1803250ec124ef",
+    "changeType": "UPSERT",
+    "aspectName": "browsePathsV2",
+    "aspect": {
+        "json": {
+            "path": []
+        }
+    },
+    "systemMetadata": {
+        "lastObserved": 1586847600000,
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -2130,7 +2374,8 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -2190,7 +2435,8 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -2207,7 +2453,29 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
+    }
+},
+{
+    "entityType": "dataset",
+    "entityUrn": "urn:li:dataset:(urn:li:dataPlatform:mysql,test_cases.myset,PROD)",
+    "changeType": "UPSERT",
+    "aspectName": "browsePathsV2",
+    "aspect": {
+        "json": {
+            "path": [
+                {
+                    "id": "urn:li:container:28176129fe1c0e526e1803250ec124ef",
+                    "urn": "urn:li:container:28176129fe1c0e526e1803250ec124ef"
+                }
+            ]
+        }
+    },
+    "systemMetadata": {
+        "lastObserved": 1586847600000,
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -2222,7 +2490,8 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -2282,7 +2551,8 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -2299,7 +2569,29 @@
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
+    }
+},
+{
+    "entityType": "dataset",
+    "entityUrn": "urn:li:dataset:(urn:li:dataPlatform:mysql,test_cases.test_empty,PROD)",
+    "changeType": "UPSERT",
+    "aspectName": "browsePathsV2",
+    "aspect": {
+        "json": {
+            "path": [
+                {
+                    "id": "urn:li:container:28176129fe1c0e526e1803250ec124ef",
+                    "urn": "urn:li:container:28176129fe1c0e526e1803250ec124ef"
+                }
+            ]
+        }
+    },
+    "systemMetadata": {
+        "lastObserved": 1586847600000,
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -2320,15 +2612,15 @@
                 {
                     "fieldPath": "col",
                     "uniqueCount": 0,
-                    "nullCount": 0,
-                    "sampleValues": []
+                    "nullCount": 0
                 }
             ]
         }
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 },
 {
@@ -2349,15 +2641,86 @@
                 {
                     "fieldPath": "dummy",
                     "uniqueCount": 0,
-                    "nullCount": 0,
-                    "sampleValues": []
+                    "nullCount": 0
                 }
             ]
         }
     },
     "systemMetadata": {
         "lastObserved": 1586847600000,
-        "runId": "mysql-test"
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
+    }
+},
+{
+    "entityType": "dataset",
+    "entityUrn": "urn:li:dataset:(urn:li:dataPlatform:mysql,metagalaxy.metadata_index_view,PROD)",
+    "changeType": "UPSERT",
+    "aspectName": "upstreamLineage",
+    "aspect": {
+        "json": {
+            "upstreams": [
+                {
+                    "auditStamp": {
+                        "time": 0,
+                        "actor": "urn:li:corpuser:unknown"
+                    },
+                    "dataset": "urn:li:dataset:(urn:li:dataPlatform:mysql,metagalaxy.metadata_index,PROD)",
+                    "type": "VIEW"
+                }
+            ],
+            "fineGrainedLineages": [
+                {
+                    "upstreamType": "FIELD_SET",
+                    "upstreams": [
+                        "urn:li:schemaField:(urn:li:dataset:(urn:li:dataPlatform:mysql,metagalaxy.metadata_index,PROD),doubleVal)"
+                    ],
+                    "downstreamType": "FIELD",
+                    "downstreams": [
+                        "urn:li:schemaField:(urn:li:dataset:(urn:li:dataPlatform:mysql,metagalaxy.metadata_index_view,PROD),doubleVal)"
+                    ],
+                    "confidenceScore": 1.0
+                },
+                {
+                    "upstreamType": "FIELD_SET",
+                    "upstreams": [
+                        "urn:li:schemaField:(urn:li:dataset:(urn:li:dataPlatform:mysql,metagalaxy.metadata_index,PROD),id)"
+                    ],
+                    "downstreamType": "FIELD",
+                    "downstreams": [
+                        "urn:li:schemaField:(urn:li:dataset:(urn:li:dataPlatform:mysql,metagalaxy.metadata_index_view,PROD),id)"
+                    ],
+                    "confidenceScore": 1.0
+                },
+                {
+                    "upstreamType": "FIELD_SET",
+                    "upstreams": [
+                        "urn:li:schemaField:(urn:li:dataset:(urn:li:dataPlatform:mysql,metagalaxy.metadata_index,PROD),path)"
+                    ],
+                    "downstreamType": "FIELD",
+                    "downstreams": [
+                        "urn:li:schemaField:(urn:li:dataset:(urn:li:dataPlatform:mysql,metagalaxy.metadata_index_view,PROD),path)"
+                    ],
+                    "confidenceScore": 1.0
+                },
+                {
+                    "upstreamType": "FIELD_SET",
+                    "upstreams": [
+                        "urn:li:schemaField:(urn:li:dataset:(urn:li:dataPlatform:mysql,metagalaxy.metadata_index,PROD),urn)"
+                    ],
+                    "downstreamType": "FIELD",
+                    "downstreams": [
+                        "urn:li:schemaField:(urn:li:dataset:(urn:li:dataPlatform:mysql,metagalaxy.metadata_index_view,PROD),urn)"
+                    ],
+                    "confidenceScore": 1.0
+                }
+            ]
+        }
+    },
+    "systemMetadata": {
+        "lastObserved": 1586847600000,
+        "runId": "mysql-test",
+        "lastRunId": "no-run-id-provided"
     }
 }
 ]

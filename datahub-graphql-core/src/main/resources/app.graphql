@@ -125,6 +125,11 @@ type PlatformPrivileges {
   Whether the user should be able to create, update, and delete ownership types.
   """
   manageOwnershipTypes: Boolean!
+  
+  """
+  Whether the user can create and delete posts pinned to the home page.
+  """
+  manageGlobalAnnouncements: Boolean!
 }
 
 """
@@ -208,9 +213,29 @@ type VisualConfig {
   faviconUrl: String
 
   """
+  Custom app title to show in the browser tab
+  """
+  appTitle: String
+
+  """
+  Boolean flag disabling viewing the Business Glossary page for users without the 'Manage Glossaries' privilege
+  """
+  hideGlossary: Boolean
+
+  """
   Configuration for the queries tab
   """
   queriesTab: QueriesTabConfig
+
+  """
+  Configuration for the queries tab
+  """
+  entityProfiles: EntityProfilesConfig
+
+  """
+  Configuration for search results
+  """
+  searchResult: SearchResultsVisualConfig
 }
 
 """
@@ -221,6 +246,38 @@ type QueriesTabConfig {
   Number of queries to show in the queries tab
   """
   queriesTabResultSize: Int
+}
+
+
+"""
+Configuration for different entity profiles
+"""
+type EntityProfilesConfig {
+  """
+  The configurations for a Domain entity profile
+  """
+  domain: EntityProfileConfig
+}
+
+"""
+Configuration for an entity profile
+"""
+type EntityProfileConfig {
+  """
+  The enum value from EntityProfileTab for which tab should be showed by default on
+  entity profile pages. If null, rely on default sorting from React code.
+  """
+  defaultTab: String
+}
+
+"""
+Configuration for a search result
+"""
+type SearchResultsVisualConfig {
+    """
+    Whether a search result should highlight the name/description if it was matched on those fields.
+    """
+    enableNameHighlight: Boolean
 }
 
 """
@@ -389,6 +446,31 @@ type FeatureFlagsConfig {
   Whether browse V2 sidebar should be shown
   """
   showBrowseV2: Boolean!
+
+  """
+  Whether browse v2 is platform mode, which means that platforms are displayed instead of entity types at the root.
+  """
+  platformBrowseV2: Boolean!
+
+  """
+  Whether we should show CTAs in the UI related to moving to Managed DataHub by Acryl.
+  """
+  showAcrylInfo: Boolean!
+  """
+  Whether ERModelRelation Tables Feature should be shown.
+  """
+  ermodelrelationFeatureEnabled: Boolean!
+
+  """
+  Whether we should show AccessManagement tab in the datahub UI.
+  """
+  showAccessManagement: Boolean!
+
+  """
+  Enables the nested Domains feature that allows users to have sub-Domains.
+  If this is off, Domains appear "flat" again.
+  """
+  nestedDomainsEnabled: Boolean!
 }
 
 """

@@ -11,7 +11,6 @@ from datahub.ingestion.api.decorators import (
     support_status,
 )
 from datahub.ingestion.api.source import Source
-from datahub.ingestion.api.source_helpers import auto_workunit_reporter
 from datahub.ingestion.api.workunit import MetadataWorkUnit
 from datahub.ingestion.source.aws.sagemaker_processors.common import (
     SagemakerSourceConfig,
@@ -57,9 +56,6 @@ class SagemakerSource(Source):
         config = SagemakerSourceConfig.parse_obj(config_dict)
         return cls(config, ctx)
 
-    def get_workunits(self) -> Iterable[MetadataWorkUnit]:
-        return auto_workunit_reporter(self.report, self.get_workunits_internal())
-
     def get_workunits_internal(self) -> Iterable[MetadataWorkUnit]:
         # get common lineage graph
         lineage_processor = LineageProcessor(
@@ -86,7 +82,7 @@ class SagemakerSource(Source):
                 env=self.env,
                 report=self.report,
                 job_type_filter=self.source_config.extract_jobs,
-                aws_region=self.source_config.aws_region,
+                aws_region=self.sagemaker_client.meta.region_name,
             )
             yield from job_processor.get_workunits()
 
@@ -102,7 +98,7 @@ class SagemakerSource(Source):
                 model_image_to_jobs=model_image_to_jobs,
                 model_name_to_jobs=model_name_to_jobs,
                 lineage=lineage,
-                aws_region=self.source_config.aws_region,
+                aws_region=self.sagemaker_client.meta.region_name,
             )
             yield from model_processor.get_workunits()
 

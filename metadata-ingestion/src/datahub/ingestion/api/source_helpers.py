@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, timezone
 from typing import (
     TYPE_CHECKING,
     Callable,
@@ -13,23 +14,28 @@ from typing import (
     Union,
 )
 
+from datahub.configuration.time_window_config import BaseTimeWindowConfig
 from datahub.emitter.mce_builder import make_dataplatform_instance_urn
 from datahub.emitter.mcp import MetadataChangeProposalWrapper
+from datahub.emitter.mcp_builder import entity_supports_aspect
 from datahub.ingestion.api.workunit import MetadataWorkUnit
 from datahub.metadata.schema_classes import (
     BrowsePathEntryClass,
     BrowsePathsClass,
     BrowsePathsV2Class,
+    ChangeTypeClass,
     ContainerClass,
+    DatasetUsageStatisticsClass,
     MetadataChangeEventClass,
     MetadataChangeProposalClass,
     StatusClass,
-    TagKeyClass,
+    TimeWindowSizeClass,
 )
 from datahub.telemetry import telemetry
+from datahub.utilities.urns.dataset_urn import DatasetUrn
 from datahub.utilities.urns.tag_urn import TagUrn
 from datahub.utilities.urns.urn import guess_entity_type
-from datahub.utilities.urns.urn_iter import list_urns
+from datahub.utilities.urns.urn_iter import list_urns, lowercase_dataset_urns
 
 if TYPE_CHECKING:
     from datahub.ingestion.api.source import SourceReport
@@ -58,13 +64,12 @@ def auto_status_aspect(
     """
     For all entities that don't have a status aspect, add one with removed set to false.
     """
-
     all_urns: Set[str] = set()
     status_urns: Set[str] = set()
+    skip_urns: Set[str] = set()
     for wu in stream:
         urn = wu.get_urn()
         all_urns.add(urn)
-
         if not wu.is_primary_source:
             # If this is a non-primary source, we pretend like we've seen the status
             # aspect so that we don't try to emit a removal for it.
@@ -84,9 +89,17 @@ def auto_status_aspect(
         else:
             raise ValueError(f"Unexpected type {type(wu.metadata)}")
 
+        if not isinstance(
+            wu.metadata, MetadataChangeEventClass
+        ) and not entity_supports_aspect(wu.metadata.entityType, StatusClass):
+            # If any entity does not support aspect 'status' then skip that entity from adding status aspect.
+            # Example like dataProcessInstance doesn't suppport status aspect.
+            # If not skipped gives error: java.lang.RuntimeException: Unknown aspect status for entity dataProcessInstance
+            skip_urns.add(urn)
+
         yield wu
 
-    for urn in sorted(all_urns - status_urns):
+    for urn in sorted(all_urns - status_urns - skip_urns):
         yield MetadataChangeProposalWrapper(
             entityUrn=urn,
             aspect=StatusClass(removed=False),
@@ -149,22 +162,54 @@ def auto_materialize_referenced_tags(
 
     for wu in stream:
         for urn in list_urns(wu.metadata):
-            if guess_entity_type(urn) == "tag":
+            if guess_entity_type(urn) == TagUrn.ENTITY_TYPE:
                 referenced_tags.add(urn)
 
         urn = wu.get_urn()
-        if guess_entity_type(urn) == "tag":
+        if guess_entity_type(urn) == TagUrn.ENTITY_TYPE:
             tags_with_aspects.add(urn)
 
         yield wu
 
     for urn in sorted(referenced_tags - tags_with_aspects):
-        tag_urn = TagUrn.create_from_string(urn)
+        tag_urn = TagUrn.from_string(urn)
 
         yield MetadataChangeProposalWrapper(
             entityUrn=urn,
-            aspect=TagKeyClass(name=tag_urn.get_entity_id()[0]),
+            aspect=tag_urn.to_key_aspect(),
         ).as_workunit()
+
+
+def auto_lowercase_urns(
+    stream: Iterable[MetadataWorkUnit],
+) -> Iterable[MetadataWorkUnit]:
+    """Lowercase all dataset urns"""
+
+    for wu in stream:
+        try:
+            old_urn = wu.get_urn()
+            lowercase_dataset_urns(wu.metadata)
+            wu.id = wu.id.replace(old_urn, wu.get_urn())
+
+            yield wu
+        except Exception as e:
+            logger.warning(f"Failed to lowercase urns for {wu}: {e}", exc_info=True)
+            yield wu
+
+
+def re_emit_browse_path_v2(
+    stream: Iterable[MetadataWorkUnit],
+) -> Iterable[MetadataWorkUnit]:
+    """Re-emit browse paths v2 aspects, to avoid race condition where server overwrites with default."""
+    browse_path_v2_workunits = []
+
+    for wu in stream:
+        yield wu
+        if wu.is_primary_source and wu.get_aspect_of_type(BrowsePathsV2Class):
+            browse_path_v2_workunits.append(wu)
+
+    for wu in browse_path_v2_workunits:
+        yield wu
 
 
 def auto_browse_path_v2(
@@ -272,6 +317,64 @@ def auto_browse_path_v2(
             "num_out_of_order": num_out_of_order,
         }
         telemetry.telemetry_instance.ping("incorrect_browse_path_v2", properties)
+
+
+def auto_empty_dataset_usage_statistics(
+    stream: Iterable[MetadataWorkUnit],
+    *,
+    dataset_urns: Set[str],
+    config: BaseTimeWindowConfig,
+    all_buckets: bool = False,  # TODO: Enable when CREATE changeType is supported for timeseries aspects
+) -> Iterable[MetadataWorkUnit]:
+    """Emit empty usage statistics aspect for all dataset_urns ingested with no usage."""
+    buckets = config.buckets() if all_buckets else config.majority_buckets()
+    bucket_timestamps = [int(bucket.timestamp() * 1000) for bucket in buckets]
+
+    # Maps time bucket -> urns with usage statistics for that bucket
+    usage_statistics_urns: Dict[int, Set[str]] = {ts: set() for ts in bucket_timestamps}
+    invalid_timestamps = set()
+
+    for wu in stream:
+        yield wu
+        if not wu.is_primary_source:
+            continue
+
+        urn = wu.get_urn()
+        if guess_entity_type(urn) == DatasetUrn.ENTITY_TYPE:
+            dataset_urns.add(urn)
+            usage_aspect = wu.get_aspect_of_type(DatasetUsageStatisticsClass)
+            if usage_aspect:
+                if usage_aspect.timestampMillis in bucket_timestamps:
+                    usage_statistics_urns[usage_aspect.timestampMillis].add(urn)
+                elif all_buckets:
+                    invalid_timestamps.add(usage_aspect.timestampMillis)
+
+    if invalid_timestamps:
+        logger.warning(
+            f"Usage statistics with unexpected timestamps, bucket_duration={config.bucket_duration}:\n"
+            ", ".join(
+                str(datetime.fromtimestamp(ts / 1000, tz=timezone.utc))
+                for ts in invalid_timestamps
+            )
+        )
+
+    for bucket in bucket_timestamps:
+        for urn in dataset_urns - usage_statistics_urns[bucket]:
+            yield MetadataChangeProposalWrapper(
+                entityUrn=urn,
+                aspect=DatasetUsageStatisticsClass(
+                    timestampMillis=bucket,
+                    eventGranularity=TimeWindowSizeClass(unit=config.bucket_duration),
+                    uniqueUserCount=0,
+                    totalSqlQueries=0,
+                    topSqlQueries=[],
+                    userCounts=[],
+                    fieldCounts=[],
+                ),
+                changeType=ChangeTypeClass.CREATE
+                if all_buckets
+                else ChangeTypeClass.UPSERT,
+            ).as_workunit()
 
 
 def _batch_workunits_by_urn(

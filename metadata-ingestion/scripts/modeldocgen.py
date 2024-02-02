@@ -305,7 +305,7 @@ def make_entity_docs(entity_display_name: str, graph: RelationshipGraph) -> str:
             )
 
         # create global metadata graph
-        global_graph_url = "https://github.com/datahub-project/datahub/raw/master/docs/imgs/datahub-metadata-model.png"
+        global_graph_url = "https://github.com/datahub-project/static-assets/raw/main/imgs/datahub-metadata-model.png"
         global_graph_section = (
             f"\n## [Global Metadata Model]({global_graph_url})"
             + f"\n![Global Graph]({global_graph_url})"
@@ -351,8 +351,8 @@ def generate_stitched_record(
             field_objects = []
             for f in entity_fields:
                 field = avro.schema.Field(
-                    type=f["type"],
-                    name=f["name"],
+                    f["type"],
+                    f["name"],
                     has_default=False,
                 )
                 field_objects.append(field)
@@ -493,10 +493,32 @@ def generate_stitched_record(
                 ],
             )
 
+@dataclass
+class EntityAspectName:
+    entityName: str
+    aspectName: str
+
+
+@dataclass
+class AspectPluginConfig:
+    className: str
+    enabled: bool
+    supportedOperations: List[str]
+    supportedEntityAspectNames: List[EntityAspectName]
+
+
+@dataclass
+class PluginConfiguration:
+    aspectPayloadValidators: Optional[List[AspectPluginConfig]] = None
+    mutationHooks: Optional[List[AspectPluginConfig]] = None
+    mclSideEffects: Optional[List[AspectPluginConfig]] = None
+    mcpSideEffects: Optional[List[AspectPluginConfig]] = None
+
 
 class EntityRegistry(ConfigModel):
     entities: List[EntityDefinition]
     events: Optional[List[EventDefinition]]
+    plugins: Optional[PluginConfiguration] = None
 
 
 def load_registry_file(registry_file: str) -> Dict[str, EntityDefinition]:

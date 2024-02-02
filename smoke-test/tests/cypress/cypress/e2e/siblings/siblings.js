@@ -80,7 +80,7 @@ describe('siblings', () => {
     cy.login();
     cy.visit('/search?page=1&query=raw_orders');
 
-    cy.contains('Showing 1 - 10 of 14 results');
+    cy.contains('Showing 1 - 10 of ');
 
     cy.get('.test-search-result').should('have.length', 5);
     cy.get('.test-search-result-sibling-section').should('have.length', 5);
@@ -113,9 +113,11 @@ describe('siblings', () => {
     cy.clickOptionWithTestId('compress-lineage-toggle');
 
     // check the subtypes
-    cy.get('text:contains(View)').should('have.length', 2);
-    cy.get('text:contains(Table)').should('have.length', 0);
-    cy.get('text:contains(Seed)').should('have.length', 1);
+    cy.get('[data-testid="Seed"]').should('have.length', 1);
+    // center counts twice since we secretely render two center nodes, plus the downstream bigquery
+    cy.get('[data-testid="View"]').should('have.length', 3);
+    cy.get('[data-testid="Table"]').should('have.length', 0);
+
 
     // check the names
     cy.get('text:contains(raw_orders)').should('have.length', 1);

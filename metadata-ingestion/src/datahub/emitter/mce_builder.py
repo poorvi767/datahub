@@ -1,17 +1,28 @@
 """Convenience functions for creating MCEs"""
+
+import hashlib
 import json
 import logging
 import os
 import re
 import time
 from enum import Enum
-from hashlib import md5
-from typing import Any, List, Optional, Type, TypeVar, Union, cast, get_type_hints
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Iterable,
+    List,
+    Optional,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+    get_type_hints,
+)
 
 import typing_inspect
 
 from datahub.configuration.source_common import DEFAULT_ENV as DEFAULT_ENV_CONFIGURATION
-from datahub.emitter.serialization_helper import pre_json_transform
 from datahub.metadata.schema_classes import (
     AssertionKeyClass,
     AuditStampClass,
@@ -49,6 +60,9 @@ UNKNOWN_USER = "urn:li:corpuser:unknown"
 DATASET_URN_TO_LOWER: bool = (
     os.getenv("DATAHUB_DATASET_URN_TO_LOWER", "false") == "true"
 )
+
+if TYPE_CHECKING:
+    from datahub.emitter.mcp_builder import DatahubKey
 
 
 # TODO: Delete this once lower-casing is the standard.
@@ -119,7 +133,7 @@ def schema_field_urn_to_key(schema_field_urn: str) -> Optional[SchemaFieldKeyCla
 
 
 def dataset_urn_to_key(dataset_urn: str) -> Optional[DatasetKeyClass]:
-    pattern = r"urn:li:dataset:\(urn:li:dataPlatform:(.*),(.*),(.*)\)"
+    pattern = r"urn:li:dataset:\((.*),(.*),(.*)\)"
     results = re.search(pattern, dataset_urn)
     if results is not None:
         return DatasetKeyClass(platform=results[1], name=results[2], origin=results[3])
@@ -127,12 +141,14 @@ def dataset_urn_to_key(dataset_urn: str) -> Optional[DatasetKeyClass]:
 
 
 def dataset_key_to_urn(key: DatasetKeyClass) -> str:
-    return (
-        f"urn:li:dataset:(urn:li:dataPlatform:{key.platform},{key.name},{key.origin})"
-    )
+    return f"urn:li:dataset:({key.platform},{key.name},{key.origin})"
 
 
-def make_container_urn(guid: str) -> str:
+def make_container_urn(guid: Union[str, "DatahubKey"]) -> str:
+    from datahub.emitter.mcp_builder import DatahubKey
+
+    if isinstance(guid, DatahubKey):
+        guid = guid.guid()
     return f"urn:li:container:{guid}"
 
 
@@ -144,11 +160,24 @@ def container_urn_to_key(guid: str) -> Optional[ContainerKeyClass]:
     return None
 
 
+class _DatahubKeyJSONEncoder(json.JSONEncoder):
+    # overload method default
+    def default(self, obj: Any) -> Any:
+        if hasattr(obj, "guid"):
+            return obj.guid()
+        # Call the default method for other types
+        return json.JSONEncoder.default(self, obj)
+
+
 def datahub_guid(obj: dict) -> str:
-    obj_str = json.dumps(
-        pre_json_transform(obj), separators=(",", ":"), sort_keys=True
-    ).encode("utf-8")
-    return md5(obj_str).hexdigest()
+    json_key = json.dumps(
+        obj,
+        separators=(",", ":"),
+        sort_keys=True,
+        cls=_DatahubKeyJSONEncoder,
+    )
+    md5_hash = hashlib.md5(json_key.encode("utf-8"))
+    return str(md5_hash.hexdigest())
 
 
 def make_assertion_urn(assertion_id: str) -> str:
@@ -165,20 +194,20 @@ def assertion_urn_to_key(assertion_urn: str) -> Optional[AssertionKeyClass]:
 
 def make_user_urn(username: str) -> str:
     """
-    Makes a user urn if the input is not a user urn already
+    Makes a user urn if the input is not a user or group urn already
     """
     return (
         f"urn:li:corpuser:{username}"
-        if not username.startswith("urn:li:corpuser:")
+        if not username.startswith(("urn:li:corpuser:", "urn:li:corpGroup:"))
         else username
     )
 
 
 def make_group_urn(groupname: str) -> str:
     """
-    Makes a group urn if the input is not a group urn already
+    Makes a group urn if the input is not a user or group urn already
     """
-    if groupname and groupname.startswith("urn:li:corpGroup:"):
+    if groupname and groupname.startswith(("urn:li:corpGroup:", "urn:li:corpuser:")):
         return groupname
     else:
         return f"urn:li:corpGroup:{groupname}"
@@ -315,26 +344,20 @@ def make_ml_model_group_urn(platform: str, group_name: str, env: str) -> str:
     )
 
 
-def is_valid_ownership_type(ownership_type: Optional[str]) -> bool:
-    return ownership_type is not None and ownership_type in [
-        OwnershipTypeClass.TECHNICAL_OWNER,
-        OwnershipTypeClass.BUSINESS_OWNER,
-        OwnershipTypeClass.DATA_STEWARD,
-        OwnershipTypeClass.NONE,
-        OwnershipTypeClass.DEVELOPER,
-        OwnershipTypeClass.DATAOWNER,
-        OwnershipTypeClass.DELEGATE,
-        OwnershipTypeClass.PRODUCER,
-        OwnershipTypeClass.CONSUMER,
-        OwnershipTypeClass.STAKEHOLDER,
+def get_class_fields(_class: Type[object]) -> Iterable[str]:
+    return [
+        f
+        for f in dir(_class)
+        if not callable(getattr(_class, f)) and not f.startswith("_")
     ]
 
 
-def validate_ownership_type(ownership_type: Optional[str]) -> str:
-    if is_valid_ownership_type(ownership_type):
-        return cast(str, ownership_type)
-    else:
-        raise ValueError(f"Unexpected ownership type: {ownership_type}")
+def validate_ownership_type(ownership_type: str) -> Tuple[str, Optional[str]]:
+    if ownership_type.startswith("urn:li:"):
+        return OwnershipTypeClass.CUSTOM, ownership_type
+    if ownership_type in get_class_fields(OwnershipTypeClass):
+        return ownership_type, None
+    raise ValueError(f"Unexpected ownership type: {ownership_type}")
 
 
 def make_lineage_mce(
@@ -342,6 +365,10 @@ def make_lineage_mce(
     downstream_urn: str,
     lineage_type: str = DatasetLineageTypeClass.TRANSFORMED,
 ) -> MetadataChangeEventClass:
+    """
+    Note: this function only supports lineage for dataset aspects. It will not
+    update lineage for any other aspect types.
+    """
     mce = MetadataChangeEventClass(
         proposedSnapshot=DatasetSnapshotClass(
             urn=downstream_urn,

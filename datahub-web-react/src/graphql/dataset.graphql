@@ -25,7 +25,6 @@ query getDataProfiles($urn: String!, $limit: Int, $startTime: Long, $endTime: Lo
 
 query getDataset($urn: String!) {
     dataset(urn: $urn) {
-        exists
         ...nonSiblingDatasetFields
         siblings {
             isPrimary
@@ -40,6 +39,7 @@ query getDataset($urn: String!) {
 
 fragment nonSiblingDatasetFields on Dataset {
     ...nonRecursiveDatasetFields
+    exists
     deprecation {
         actor
         deprecated
@@ -112,13 +112,7 @@ fragment nonSiblingDatasetFields on Dataset {
     }
     ...viewProperties
     autoRenderAspects: aspects(input: { autoRenderOnly: true }) {
-        aspectName
-        payload
-        renderSpec {
-            displayType
-            displayName
-            key
-        }
+        ...autoRenderAspectFields
     }
     status {
         removed
@@ -306,6 +300,37 @@ query getDatasetSchema($urn: String!) {
                 type
                 ... on Dataset {
                     ...datasetSchema
+                }
+            }
+        }
+    }
+}
+
+query getExternalRoles($urn: String!) {
+    dataset(urn: $urn) {
+        access {
+            ...getRoles
+        }
+        __typename
+    }
+}
+
+fragment getRoles on Access {
+    roles {
+        role {
+            id
+            properties {
+                name
+                description
+                type
+                requestUrl
+            }
+            urn
+            actors {
+                users {
+                    user {
+                        urn
+                    }
                 }
             }
         }

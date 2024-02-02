@@ -254,11 +254,13 @@ class JsonSchemaTranslator:
                 isPartOfKey=field_path.is_key_schema,
             )
         elif datahub_field_type in [EnumTypeClass]:
+            # Convert enums to string representation
+            schema_enums = list(map(json.dumps, schema["enum"]))
             yield SchemaField(
                 fieldPath=field_path.expand_type("enum", schema).as_string(),
                 type=type_override or SchemaFieldDataTypeClass(type=EnumTypeClass()),
                 nativeDataType="Enum",
-                description=f"one of {','.join(schema['enum'])}",
+                description=f"One of: {', '.join(schema_enums)}",
                 nullable=nullable,
                 jsonProps=JsonSchemaTranslator._get_jsonprops_for_any_schema(
                     schema, required=required
@@ -314,10 +316,12 @@ class JsonSchemaTranslator:
 
     @staticmethod
     def _get_description_from_any_schema(schema: Dict) -> str:
-        # we do a redundant `if description in schema` check to guard against the scenario that schema is not a dictionary
-        description = (
-            (schema.get("description") or "") if "description" in schema else ""
-        )
+        description = ""
+        if "description" in schema:
+            description = str(schema.get("description"))
+        elif "const" in schema:
+            schema_const = schema.get("const")
+            description = f"Const value: {schema_const}"
         if JsonSchemaTranslator._INJECT_DEFAULTS_INTO_DESCRIPTION:
             default = schema.get("default")
             if default is not None:
@@ -433,6 +437,7 @@ class JsonSchemaTranslator:
             field_path._set_parent_type_if_not_exists(
                 DataHubType(type=MapTypeClass, nested_type=value_type)
             )
+            # FIXME: description not set. This is present in schema["description"].
             yield from JsonSchemaTranslator.get_fields(
                 JsonSchemaTranslator._get_type_from_schema(
                     schema["additionalProperties"]
@@ -595,7 +600,8 @@ class JsonSchemaTranslator:
                     jsonref_schema_dict = schema_dict
                 else:
                     # first validate the schema using a json validator
-                    jsonschema.Draft7Validator.check_schema(schema_dict)
+                    validator = jsonschema.validators.validator_for(schema_dict)
+                    validator.check_schema(schema_dict)
                     # then apply jsonref
                     jsonref_schema_dict = jsonref.loads(schema_string)
             except Exception as e:

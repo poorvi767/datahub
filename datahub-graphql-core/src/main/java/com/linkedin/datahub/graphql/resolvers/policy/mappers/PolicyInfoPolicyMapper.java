@@ -1,5 +1,6 @@
 package com.linkedin.datahub.graphql.resolvers.policy.mappers;
 
+import com.linkedin.common.UrnArray;
 import com.linkedin.common.urn.Urn;
 import com.linkedin.datahub.graphql.generated.ActorFilter;
 import com.linkedin.datahub.graphql.generated.Policy;
@@ -19,9 +20,9 @@ import java.net.URISyntaxException;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 
-
 /**
- * Maps {@link com.linkedin.policy.DataHubPolicyInfo} to GraphQL {@link com.linkedin.datahub.graphql.generated.Policy}.
+ * Maps {@link com.linkedin.policy.DataHubPolicyInfo} to GraphQL {@link
+ * com.linkedin.datahub.graphql.generated.Policy}.
  */
 public class PolicyInfoPolicyMapper implements ModelMapper<DataHubPolicyInfo, Policy> {
 
@@ -53,14 +54,22 @@ public class PolicyInfoPolicyMapper implements ModelMapper<DataHubPolicyInfo, Po
     result.setAllGroups(actorFilter.isAllGroups());
     result.setAllUsers(actorFilter.isAllUsers());
     result.setResourceOwners(actorFilter.isResourceOwners());
+    UrnArray resourceOwnersTypes = actorFilter.getResourceOwnersTypes();
+    if (resourceOwnersTypes != null) {
+      result.setResourceOwnersTypes(
+          resourceOwnersTypes.stream().map(Urn::toString).collect(Collectors.toList()));
+    }
     if (actorFilter.hasGroups()) {
-      result.setGroups(actorFilter.getGroups().stream().map(Urn::toString).collect(Collectors.toList()));
+      result.setGroups(
+          actorFilter.getGroups().stream().map(Urn::toString).collect(Collectors.toList()));
     }
     if (actorFilter.hasUsers()) {
-      result.setUsers(actorFilter.getUsers().stream().map(Urn::toString).collect(Collectors.toList()));
+      result.setUsers(
+          actorFilter.getUsers().stream().map(Urn::toString).collect(Collectors.toList()));
     }
     if (actorFilter.hasRoles()) {
-      result.setRoles(actorFilter.getRoles().stream().map(Urn::toString).collect(Collectors.toList()));
+      result.setRoles(
+          actorFilter.getRoles().stream().map(Urn::toString).collect(Collectors.toList()));
     }
     return result;
   }
@@ -82,14 +91,20 @@ public class PolicyInfoPolicyMapper implements ModelMapper<DataHubPolicyInfo, Po
 
   private PolicyMatchFilter mapFilter(final com.linkedin.policy.PolicyMatchFilter filter) {
     return PolicyMatchFilter.builder()
-        .setCriteria(filter.getCriteria()
-            .stream()
-            .map(criterion -> PolicyMatchCriterion.builder()
-                .setField(criterion.getField())
-                .setValues(criterion.getValues().stream().map(this::mapValue).collect(Collectors.toList()))
-                .setCondition(PolicyMatchCondition.valueOf(criterion.getCondition().name()))
-                .build())
-            .collect(Collectors.toList()))
+        .setCriteria(
+            filter.getCriteria().stream()
+                .map(
+                    criterion ->
+                        PolicyMatchCriterion.builder()
+                            .setField(criterion.getField())
+                            .setValues(
+                                criterion.getValues().stream()
+                                    .map(this::mapValue)
+                                    .collect(Collectors.toList()))
+                            .setCondition(
+                                PolicyMatchCondition.valueOf(criterion.getCondition().name()))
+                            .build())
+                .collect(Collectors.toList()))
         .build();
   }
 
@@ -97,7 +112,10 @@ public class PolicyInfoPolicyMapper implements ModelMapper<DataHubPolicyInfo, Po
     try {
       // If value is urn, set entity field
       Urn urn = Urn.createFromString(value);
-      return PolicyMatchCriterionValue.builder().setValue(value).setEntity(UrnToEntityMapper.map(urn)).build();
+      return PolicyMatchCriterionValue.builder()
+          .setValue(value)
+          .setEntity(UrnToEntityMapper.map(urn))
+          .build();
     } catch (URISyntaxException e) {
       // Value is not an urn. Just set value
       return PolicyMatchCriterionValue.builder().setValue(value).build();

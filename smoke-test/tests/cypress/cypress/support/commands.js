@@ -27,12 +27,25 @@ Cypress.Commands.add('login', () => {
       method: 'POST',
       url: '/logIn',
       body: {
-         username: Cypress.env('ADMIN_USERNAME'),
-         password: Cypress.env('ADMIN_PASSWORD'),
+        username: Cypress.env('ADMIN_USERNAME'),
+        password: Cypress.env('ADMIN_PASSWORD'),
       },
       retryOnStatusCodeFailure: true,
     });
 })
+
+Cypress.Commands.add("loginWithCredentials", (username, password) => {
+  cy.visit('/');
+  if (username,password) {
+    cy.get('input[data-testid=username]').type(username);
+    cy.get('input[data-testid=password]').type(password);
+  } else {
+    cy.get('input[data-testid=username]').type(Cypress.env('ADMIN_USERNAME'));
+    cy.get('input[data-testid=password]').type(Cypress.env('ADMIN_PASSWORD'));
+  }
+  cy.contains('Sign In').click();
+  cy.contains('Welcome back');
+});
 
 Cypress.Commands.add('deleteUrn', (urn) => {
     cy.request({ method: 'POST', url: 'http://localhost:8080/entities?action=delete', body: {
@@ -69,6 +82,17 @@ Cypress.Commands.add("goToViewsSettings", () => {
 Cypress.Commands.add("goToOwnershipTypesSettings", () => {
   cy.visit("/settings/ownership");
   cy.waitTextVisible("Manage Ownership");
+});
+
+Cypress.Commands.add("goToHomePagePostSettings", () => {
+  cy.visit("/settings/posts");
+  cy.waitTextVisible("Home Page Posts");
+});
+
+Cypress.Commands.add("goToAccessTokenSettings", () => {
+  cy.visit("/settings/tokens");
+  cy.waitTextVisible("Manage Access Tokens");
+  cy.wait(3000);
 });
 
 Cypress.Commands.add("goToIngestionPage", () => {
@@ -140,7 +164,11 @@ Cypress.Commands.add("openThreeDotDropdown", () => {
 });
 
 Cypress.Commands.add("clickOptionWithText", (text) => {
-  cy.contains(text).click();
+  cy.contains(text).should('be.visible').click();
+});
+
+Cypress.Commands.add("clickOptionWithTextToScrollintoView", (text) => {
+  cy.contains(text).scrollIntoView().click();
 });
 
 Cypress.Commands.add("deleteFromDropdown", () => {
@@ -151,14 +179,15 @@ Cypress.Commands.add("deleteFromDropdown", () => {
 
 Cypress.Commands.add("addViaFormModal", (text, modelHeader) => {
   cy.waitTextVisible(modelHeader);
-  cy.get(".ant-form-item-control-input-content > input[type='text']").first().type(text);
+  cy.get('.ProseMirror-focused').type(text);
   cy.get(".ant-modal-footer > button:nth-child(2)").click();
 });
 
-Cypress.Commands.add("addViaModal", (text, modelHeader) => {
+Cypress.Commands.add("addViaModal", (text, modelHeader, value, dataTestId) => {
   cy.waitTextVisible(modelHeader);
   cy.get(".ant-input-affix-wrapper > input[type='text']").first().type(text);
-  cy.get(".ant-modal-footer > button:nth-child(2)").click();
+  cy.get('[data-testid="' + dataTestId + '"]').click();
+  cy.contains(value).should('be.visible');
 });
 
 Cypress.Commands.add("ensureTextNotPresent", (text) => {
@@ -187,6 +216,10 @@ Cypress.Commands.add( 'multiSelect', (within_data_id , text) => {
   cy.openMultiSelect(within_data_id);
   cy.waitTextVisible(text);
   cy.clickOptionWithText(text);
+});
+
+Cypress.Commands.add("getWithTestId", (id) => {
+  return cy.get(selectorWithtestId(id));
 });
 
 Cypress.Commands.add("enterTextInTestId", (id, text) => {
@@ -257,6 +290,70 @@ Cypress.Commands.add("mouseover", (selector) => {
     { force: true }
   );
 })
+
+Cypress.Commands.add("createUser", (name, password, email) => {
+  cy.visit("/settings/identities/users");
+  cy.clickOptionWithText("Invite Users");
+  cy.waitTextVisible(/signup\?invite_token=\w{32}/).then(($elem) => {
+    const inviteLink = $elem.text();
+    cy.visit("/settings/identities/users");
+    cy.logout();
+    cy.visit(inviteLink);
+    cy.enterTextInTestId("email", email);
+    cy.enterTextInTestId("name", name);
+    cy.enterTextInTestId("password", password);
+    cy.enterTextInTestId("confirmPassword", password);
+    cy.mouseover("#title").click();
+    cy.waitTextVisible("Other").click();
+    cy.get("[type=submit]").click();
+    cy.waitTextVisible("Welcome to DataHub");
+    cy.hideOnboardingTour();
+    cy.waitTextVisible(name);
+    cy.logout()
+    cy.loginWithCredentials();
+  })
+})
+
+Cypress.Commands.add("createGroup", (name, description, group_id) => {
+  cy.visit("/settings/identities/groups")
+  cy.clickOptionWithText("Create group");
+  cy.waitTextVisible("Create new group");
+  cy.get("#name").type(name);
+  cy.get("#description").type(description);
+  cy.contains("Advanced").click();
+  cy.waitTextVisible("Group Id");
+  cy.get("#groupId").type(group_id);
+  cy.get("#createGroupButton").click();
+  cy.waitTextVisible("Created group!");
+  cy.waitTextVisible(name);
+})
+
+Cypress.Commands.add("addGroupMember", (group_name, group_urn, member_name) => {
+  cy.visit(group_urn)
+  cy.clickOptionWithText(group_name);
+  cy.contains(group_name).should("be.visible");
+  cy.get('[role="tab"]').contains("Members").click();
+  cy.clickOptionWithText("Add Member");
+  cy.contains("Search for users...").click({ force: true });
+  cy.focused().type(member_name);
+  cy.contains(member_name).click();
+  cy.focused().blur();
+  cy.contains(member_name).should("have.length", 1);
+  cy.get('[role="dialog"] button').contains("Add").click({ force: true });
+  cy.waitTextVisible("Group members added!");
+  cy.contains(member_name, {timeout: 10000}).should("be.visible");
+})
+
+Cypress.Commands.add("createGlossaryTermGroup", (term_group_name) => {
+  cy.goToGlossaryList();
+  cy.clickOptionWithText('Add Term Group');
+  cy.waitTextVisible("Create Term Group");
+  cy.enterTextInTestId("create-glossary-entity-modal-name", term_group_name);
+  cy.clickOptionWithTestId("glossary-entity-modal-create-button");
+  cy.get('[data-testid="glossary-browser-sidebar"]').contains(term_group_name).should("be.visible");
+  cy.waitTextVisible(`Created Term Group!`);
+});
+
 
 //
 //

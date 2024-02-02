@@ -20,11 +20,7 @@ from datahub.ingestion.api.decorators import (
     support_status,
 )
 from datahub.ingestion.api.source import Source, SourceReport
-from datahub.ingestion.api.source_helpers import (
-    auto_status_aspect,
-    auto_workunit,
-    auto_workunit_reporter,
-)
+from datahub.ingestion.api.source_helpers import auto_workunit
 from datahub.ingestion.api.workunit import MetadataWorkUnit
 from datahub.ingestion.graph.client import DataHubGraph
 from datahub.utilities.registries.domain_registry import DomainRegistry
@@ -75,6 +71,7 @@ class GlossaryNodeConfig(ConfigModel):
     terms: Optional[List["GlossaryTermConfig"]]
     nodes: Optional[List["GlossaryNodeConfig"]]
     knowledge_links: Optional[List[KnowledgeCard]]
+    custom_properties: Optional[Dict[str, str]]
 
     # Private fields.
     _urn: str
@@ -117,7 +114,7 @@ def create_id(path: List[str], default_id: Optional[str], enable_auto_id: bool) 
 
     id_: str = ".".join(path)
 
-    if UrnEncoder.contains_reserved_char(id_):
+    if UrnEncoder.contains_extended_reserved_char(id_):
         enable_auto_id = True
 
     if enable_auto_id:
@@ -256,6 +253,7 @@ def get_mces_from_node(
         definition=glossaryNode.description,
         parentNode=parentNode,
         name=glossaryNode.name,
+        customProperties=glossaryNode.custom_properties,
     )
     node_owners = parentOwners
     if glossaryNode.owners is not None:
@@ -499,17 +497,9 @@ class BusinessGlossaryFileSource(Source):
     def load_glossary_config(
         cls, file_name: Union[str, pathlib.Path]
     ) -> BusinessGlossaryConfig:
-        config = load_config_file(file_name)
+        config = load_config_file(file_name, resolve_env_vars=True)
         glossary_cfg = BusinessGlossaryConfig.parse_obj(config)
         return glossary_cfg
-
-    def get_workunits(self) -> Iterable[MetadataWorkUnit]:
-        return auto_workunit_reporter(
-            self.report,
-            auto_status_aspect(
-                self.get_workunits_internal(),
-            ),
-        )
 
     def get_workunits_internal(
         self,

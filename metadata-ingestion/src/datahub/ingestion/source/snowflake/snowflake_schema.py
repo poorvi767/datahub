@@ -77,6 +77,7 @@ class SnowflakeColumn(BaseColumn):
 
 @dataclass
 class SnowflakeTable(BaseTable):
+    type: Optional[str] = None
     clustering_key: Optional[str] = None
     pk: Optional[SnowflakePK] = None
     columns: List[SnowflakeColumn] = field(default_factory=list)
@@ -88,6 +89,7 @@ class SnowflakeTable(BaseTable):
 
 @dataclass
 class SnowflakeView(BaseView):
+    materialized: bool = False
     columns: List[SnowflakeColumn] = field(default_factory=list)
     tags: Optional[List[SnowflakeTag]] = None
     column_tags: Dict[str, List[SnowflakeTag]] = field(default_factory=dict)
@@ -260,9 +262,11 @@ class SnowflakeDataDictionary(SnowflakeQueryMixin):
         for table in cur:
             if table["TABLE_SCHEMA"] not in tables:
                 tables[table["TABLE_SCHEMA"]] = []
+
             tables[table["TABLE_SCHEMA"]].append(
                 SnowflakeTable(
                     name=table["TABLE_NAME"],
+                    type=table["TABLE_TYPE"],
                     created=table["CREATED"],
                     last_altered=table["LAST_ALTERED"],
                     size_in_bytes=table["BYTES"],
@@ -286,6 +290,7 @@ class SnowflakeDataDictionary(SnowflakeQueryMixin):
             tables.append(
                 SnowflakeTable(
                     name=table["TABLE_NAME"],
+                    type=table["TABLE_TYPE"],
                     created=table["CREATED"],
                     last_altered=table["LAST_ALTERED"],
                     size_in_bytes=table["BYTES"],
@@ -321,6 +326,8 @@ class SnowflakeDataDictionary(SnowflakeQueryMixin):
                     comment=table["comment"],
                     view_definition=table["text"],
                     last_altered=table["created_on"],
+                    materialized=table.get("is_materialized", "false").lower()
+                    == "true",
                 )
             )
         return views

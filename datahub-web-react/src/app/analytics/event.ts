@@ -23,6 +23,7 @@ export enum EventType {
     BrowseV2ToggleSidebarEvent,
     BrowseV2ToggleNodeEvent,
     BrowseV2SelectNodeEvent,
+    BrowseV2EntityLinkClickEvent,
     EntityViewEvent,
     EntitySectionViewEvent,
     EntityActionEvent,
@@ -34,6 +35,8 @@ export enum EventType {
     SearchBarExploreAllClickEvent,
     SearchResultsExploreAllClickEvent,
     SearchAcrossLineageEvent,
+    VisualLineageViewEvent,
+    VisualLineageExpandGraphEvent,
     SearchAcrossLineageResultsViewEvent,
     DownloadAsCsvEvent,
     SignUpEvent,
@@ -45,6 +48,7 @@ export enum EventType {
     CreateResetCredentialsLinkEvent,
     DeleteEntityEvent,
     SelectUserRoleEvent,
+    SelectGroupRoleEvent,
     BatchSelectUserRoleEvent,
     CreatePolicyEvent,
     UpdatePolicyEvent,
@@ -54,6 +58,7 @@ export enum EventType {
     ShowStandardHomepageEvent,
     CreateGlossaryEntityEvent,
     CreateDomainEvent,
+    MoveDomainEvent,
     CreateIngestionSourceEvent,
     UpdateIngestionSourceEvent,
     DeleteIngestionSourceEvent,
@@ -244,8 +249,20 @@ export interface BrowseV2ToggleNodeEvent extends BaseEvent {
  */
 export interface BrowseV2SelectNodeEvent extends BaseEvent {
     type: EventType.BrowseV2SelectNodeEvent;
-    targetNode: 'browse';
+    targetNode: 'browse' | 'platform';
     action: 'select' | 'deselect';
+    entity: string;
+    environment?: string;
+    platform?: string;
+    targetDepth: number;
+}
+
+/**
+ * Logged when a user clicks a container link in the sidebar
+ */
+export interface BrowseV2EntityLinkClickEvent extends BaseEvent {
+    type: EventType.BrowseV2EntityLinkClickEvent;
+    targetNode: 'browse';
     entity: string;
     environment?: string;
     platform?: string;
@@ -326,12 +343,23 @@ export interface HomePageRecommendationClickEvent extends BaseEvent {
     index?: number;
 }
 
+export interface VisualLineageViewEvent extends BaseEvent {
+    type: EventType.VisualLineageViewEvent;
+    entityType?: EntityType;
+}
+
+export interface VisualLineageExpandGraphEvent extends BaseEvent {
+    type: EventType.VisualLineageExpandGraphEvent;
+    targetEntityType?: EntityType;
+}
+
 export interface SearchAcrossLineageEvent extends BaseEvent {
     type: EventType.SearchAcrossLineageEvent;
     query: string;
     entityTypeFilter?: EntityType;
     pageNumber: number;
     originPath: string;
+    maxDegree?: string;
 }
 export interface SearchAcrossLineageResultsViewEvent extends BaseEvent {
     type: EventType.SearchAcrossLineageResultsViewEvent;
@@ -339,6 +367,7 @@ export interface SearchAcrossLineageResultsViewEvent extends BaseEvent {
     entityTypeFilter?: EntityType;
     page?: number;
     total: number;
+    maxDegree?: string;
 }
 
 export interface DownloadAsCsvEvent extends BaseEvent {
@@ -382,6 +411,12 @@ export interface SelectUserRoleEvent extends BaseEvent {
     type: EventType.SelectUserRoleEvent;
     roleUrn: string;
     userUrn: string;
+}
+
+export interface SelectGroupRoleEvent extends BaseEvent {
+    type: EventType.SelectGroupRoleEvent;
+    roleUrn: string;
+    groupUrn?: string;
 }
 
 export interface BatchSelectUserRoleEvent extends BaseEvent {
@@ -441,6 +476,13 @@ export interface CreateGlossaryEntityEvent extends BaseEvent {
 
 export interface CreateDomainEvent extends BaseEvent {
     type: EventType.CreateDomainEvent;
+    parentDomainUrn?: string;
+}
+
+export interface MoveDomainEvent extends BaseEvent {
+    type: EventType.MoveDomainEvent;
+    oldParentDomainUrn?: string;
+    parentDomainUrn?: string;
 }
 
 // Managed Ingestion Events
@@ -613,12 +655,15 @@ export type Event =
     | BrowseV2ToggleSidebarEvent
     | BrowseV2ToggleNodeEvent
     | BrowseV2SelectNodeEvent
+    | BrowseV2EntityLinkClickEvent
     | EntityViewEvent
     | EntitySectionViewEvent
     | EntityActionEvent
     | RecommendationImpressionEvent
     | SearchAcrossLineageEvent
     | SearchAcrossLineageResultsViewEvent
+    | VisualLineageViewEvent
+    | VisualLineageExpandGraphEvent
     | DownloadAsCsvEvent
     | RecommendationClickEvent
     | HomePageRecommendationClickEvent
@@ -630,6 +675,7 @@ export type Event =
     | CreateResetCredentialsLinkEvent
     | DeleteEntityEvent
     | SelectUserRoleEvent
+    | SelectGroupRoleEvent
     | BatchSelectUserRoleEvent
     | CreatePolicyEvent
     | UpdatePolicyEvent
@@ -639,6 +685,7 @@ export type Event =
     | ShowStandardHomepageEvent
     | CreateGlossaryEntityEvent
     | CreateDomainEvent
+    | MoveDomainEvent
     | CreateIngestionSourceEvent
     | UpdateIngestionSourceEvent
     | DeleteIngestionSourceEvent

@@ -9,8 +9,8 @@ from datahub.configuration.common import MetaError
 from datahub.configuration.pattern_utils import is_schema_allowed
 from datahub.ingestion.source.snowflake.constants import (
     GENERIC_PERMISSION_ERROR_KEY,
-    SNOWFLAKE_DEFAULT_CLOUD,
     SNOWFLAKE_REGION_CLOUD_REGION_MAPPING,
+    SnowflakeCloudProvider,
     SnowflakeObjectDomain,
 )
 from datahub.ingestion.source.snowflake.snowflake_config import SnowflakeV2Config
@@ -72,6 +72,15 @@ class SnowflakeCommonProtocol(SnowflakeLoggingProtocol, Protocol):
 class SnowflakeCommonMixin:
     platform = "snowflake"
 
+    CLOUD_REGION_IDS_WITHOUT_CLOUD_SUFFIX = [
+        "us-west-2",
+        "us-east-1",
+        "eu-west-1",
+        "eu-central-1",
+        "ap-southeast-1",
+        "ap-southeast-2",
+    ]
+
     @staticmethod
     def create_snowsight_base_url(
         account_locator: str,
@@ -79,12 +88,23 @@ class SnowflakeCommonMixin:
         cloud: str,
         privatelink: bool = False,
     ) -> Optional[str]:
+        if cloud:
+            url_cloud_provider_suffix = f".{cloud}"
+
+        if cloud == SnowflakeCloudProvider.AWS:
+            # Some AWS regions do not have cloud suffix. See below the list:
+            # https://docs.snowflake.com/en/user-guide/admin-account-identifier#non-vps-account-locator-formats-by-cloud-platform-and-region
+            if (
+                cloud_region_id
+                in SnowflakeCommonMixin.CLOUD_REGION_IDS_WITHOUT_CLOUD_SUFFIX
+            ):
+                url_cloud_provider_suffix = ""
+            else:
+                url_cloud_provider_suffix = f".{cloud}"
         if privatelink:
             url = f"https://app.{account_locator}.{cloud_region_id}.privatelink.snowflakecomputing.com/"
-        elif cloud == SNOWFLAKE_DEFAULT_CLOUD:
-            url = f"https://app.snowflake.com/{cloud_region_id}/{account_locator}/"
         else:
-            url = f"https://app.snowflake.com/{cloud_region_id}.{cloud}/{account_locator}/"
+            url = f"https://app.snowflake.com/{cloud_region_id}{url_cloud_provider_suffix}/{account_locator}/"
         return url
 
     @staticmethod
@@ -199,10 +219,17 @@ class SnowflakeCommonMixin:
     # Users without email were skipped from both user entries as well as aggregates.
     # However email is not mandatory field in snowflake user, user_name is always present.
     def get_user_identifier(
-        self: SnowflakeCommonProtocol, user_name: str, user_email: Optional[str]
+        self: SnowflakeCommonProtocol,
+        user_name: str,
+        user_email: Optional[str],
+        email_as_user_identifier: bool,
     ) -> str:
         if user_email:
-            return self.snowflake_identifier(user_email.split("@")[0])
+            return self.snowflake_identifier(
+                user_email
+                if email_as_user_identifier is True
+                else user_email.split("@")[0]
+            )
         return self.snowflake_identifier(user_name)
 
     # TODO: Revisit this after stateful ingestion can commit checkpoint

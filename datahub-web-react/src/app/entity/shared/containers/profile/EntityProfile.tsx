@@ -4,10 +4,10 @@ import { MutationHookOptions, MutationTuple, QueryHookOptions, QueryResult } fro
 import styled from 'styled-components/macro';
 import { useHistory } from 'react-router';
 import { EntityType, Exact } from '../../../../../types.generated';
-import { Message } from '../../../../shared/Message';
 import {
     getEntityPath,
     getOnboardingStepIdsForEntityType,
+    sortEntityProfileTabs,
     useRoutedTab,
     useUpdateGlossaryEntityDataOnChange,
 } from './utils';
@@ -30,7 +30,6 @@ import LineageExplorer from '../../../../lineage/LineageExplorer';
 import CompactContext from '../../../../shared/CompactContext';
 import DynamicTab from '../../tabs/Entity/weaklyTypedAspects/DynamicTab';
 import analytics, { EventType } from '../../../../analytics';
-import { ProfileSidebarResizer } from './sidebar/ProfileSidebarResizer';
 import { EntityMenuItems } from '../../EntityDropdown/EntityDropdown';
 import { useIsSeparateSiblingsMode } from '../../siblingUtils';
 import { EntityActionItem } from '../../entity/EntityActions';
@@ -43,6 +42,9 @@ import {
     LINEAGE_GRAPH_INTRO_ID,
     LINEAGE_GRAPH_TIME_FILTER_ID,
 } from '../../../../onboarding/config/LineageGraphOnboardingConfig';
+import { useAppConfig } from '../../../../useAppConfig';
+import { useUpdateDomainEntityDataOnChange } from '../../../../domain/utils';
+import ProfileSidebar from './sidebar/ProfileSidebar';
 
 type Props<T, U> = {
     urn: string;
@@ -73,8 +75,6 @@ type Props<T, U> = {
     isNameEditable?: boolean;
 };
 
-const MAX_SIDEBAR_WIDTH = 800;
-const MIN_SIDEBAR_WIDTH = 200;
 const MAX_COMPACT_WIDTH = 490 - 24 * 2;
 
 const ContentContainer = styled.div`
@@ -83,6 +83,7 @@ const ContentContainer = styled.div`
     min-height: 100%;
     flex: 1;
     min-width: 0;
+    overflow: hidden;
 `;
 
 const HeaderAndTabs = styled.div`
@@ -111,15 +112,6 @@ const HeaderAndTabsFlex = styled.div`
         -webkit-box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.75);
     }
 `;
-const Sidebar = styled.div<{ $width: number }>`
-    max-height: 100%;
-    overflow: auto;
-    width: ${(props) => props.$width}px;
-    min-width: ${(props) => props.$width}px;
-    padding-left: 20px;
-    padding-right: 20px;
-    padding-bottom: 20px;
-`;
 
 const Header = styled.div`
     border-bottom: 1px solid ${ANTD_GRAY[4.5]};
@@ -143,7 +135,7 @@ const defaultTabDisplayConfig = {
     enabled: (_, _1) => true,
 };
 
-const defaultSidebarSection = {
+export const DEFAULT_SIDEBAR_SECTION = {
     visible: (_, _1) => true,
 };
 
@@ -164,19 +156,35 @@ export const EntityProfile = <T, U>({
     hideBrowseBar,
     subHeader,
 }: Props<T, U>): JSX.Element => {
+    const { config } = useAppConfig();
+    const { ermodelrelationFeatureEnabled } = config.featureFlags;
     const isLineageMode = useIsLineageMode();
     const isHideSiblingMode = useIsSeparateSiblingsMode();
     const entityRegistry = useEntityRegistry();
     const history = useHistory();
+    const appConfig = useAppConfig();
     const isCompact = React.useContext(CompactContext);
     const tabsWithDefaults = tabs.map((tab) => ({ ...tab, display: { ...defaultTabDisplayConfig, ...tab.display } }));
+
+    if (ermodelrelationFeatureEnabled) {
+        const relationIndex = tabsWithDefaults.findIndex((tab) => {
+            return tab.name === 'Relationships';
+        });
+        if (relationIndex >= 0) {
+            tabsWithDefaults[relationIndex] = {
+                ...tabsWithDefaults[relationIndex],
+                display: { ...defaultTabDisplayConfig },
+            };
+        }
+    }
+
+    const sortedTabs = sortEntityProfileTabs(appConfig.config, entityType, tabsWithDefaults);
     const sideBarSectionsWithDefaults = sidebarSections.map((sidebarSection) => ({
         ...sidebarSection,
-        display: { ...defaultSidebarSection, ...sidebarSection.display },
+        display: { ...DEFAULT_SIDEBAR_SECTION, ...sidebarSection.display },
     }));
 
     const [shouldRefetchEmbeddedListSearch, setShouldRefetchEmbeddedListSearch] = useState(false);
-    const [sidebarWidth, setSidebarWidth] = useState(window.innerWidth * 0.25);
     const entityStepIds: string[] = getOnboardingStepIdsForEntityType(entityType);
     const lineageGraphStepIds: string[] = [LINEAGE_GRAPH_INTRO_ID, LINEAGE_GRAPH_TIME_FILTER_ID];
     const stepIds = isLineageMode ? lineageGraphStepIds : entityStepIds;
@@ -208,6 +216,7 @@ export const EntityProfile = <T, U>({
         useGetDataForProfile({ urn, entityType, useEntityQuery, getOverrideProperties });
 
     useUpdateGlossaryEntityDataOnChange(entityData, entityType);
+    useUpdateDomainEntityDataOnChange(entityData, entityType);
 
     const maybeUpdateEntity = useUpdateQuery?.({
         onCompleted: () => refetch(),
@@ -233,9 +242,10 @@ export const EntityProfile = <T, U>({
                 visible: () => true,
                 enabled: () => true,
             },
+            getDynamicName: () => '',
         })) || [];
 
-    const visibleTabs = [...tabsWithDefaults, ...autoRenderTabs].filter((tab) =>
+    const visibleTabs = [...sortedTabs, ...autoRenderTabs].filter((tab) =>
         tab.display?.visible(entityData, dataPossiblyCombinedWithSiblings),
     );
 
@@ -268,7 +278,6 @@ export const EntityProfile = <T, U>({
                 }}
             >
                 <>
-                    {loading && <Message type="loading" content="Loading..." style={{ marginTop: '10%' }} />}
                     {(error && <ErrorSection />) ||
                         (!loading && (
                             <CompactProfile>
@@ -317,7 +326,6 @@ export const EntityProfile = <T, U>({
                         banner
                     />
                 )}
-                {loading && <Message type="loading" content="Loading..." style={{ marginTop: '10%' }} />}
                 {(error && <ErrorSection />) || (
                     <ContentContainer>
                         {isLineageMode ? (
@@ -340,15 +348,7 @@ export const EntityProfile = <T, U>({
                                         </TabContent>
                                     </HeaderAndTabsFlex>
                                 </HeaderAndTabs>
-                                <ProfileSidebarResizer
-                                    setSidePanelWidth={(width) =>
-                                        setSidebarWidth(Math.min(Math.max(width, MIN_SIDEBAR_WIDTH), MAX_SIDEBAR_WIDTH))
-                                    }
-                                    initialSize={sidebarWidth}
-                                />
-                                <Sidebar $width={sidebarWidth}>
-                                    <EntitySidebar sidebarSections={sideBarSectionsWithDefaults} />
-                                </Sidebar>
+                                <ProfileSidebar sidebarSections={sidebarSections} />
                             </>
                         )}
                     </ContentContainer>

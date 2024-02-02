@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useHistory, useLocation } from 'react-router';
+import { debounce } from 'lodash';
 import * as QueryString from 'query-string';
 import { useTheme } from 'styled-components';
+import { Helmet } from 'react-helmet-async';
 import { SearchHeader } from './SearchHeader';
 import { useEntityRegistry } from '../useEntityRegistry';
 import { EntityType, FacetFilterInput } from '../../types.generated';
@@ -16,6 +18,9 @@ import { PageRoutes } from '../../conf/Global';
 import { getAutoCompleteInputFromQuickFilter } from './utils/filterUtils';
 import { useQuickFiltersContext } from '../../providers/QuickFiltersContext';
 import { useUserContext } from '../context/useUserContext';
+import { useSelectedSortOption } from './context/SearchContext';
+import { HALF_SECOND_IN_MS } from '../entity/shared/tabs/Dataset/Queries/utils/constants';
+import { useBrowserTitle } from '../shared/BrowserTabTitleContext';
 
 const styles = {
     children: {
@@ -52,6 +57,7 @@ export const SearchablePage = ({ onSearch, onAutoComplete, children }: Props) =>
     const currentQuery: string = isSearchResultPage(location.pathname)
         ? decodeURIComponent(params.query ? (params.query as string) : '')
         : '';
+    const selectedSortOption = useSelectedSortOption();
 
     const history = useHistory();
     const entityRegistry = useEntityRegistry();
@@ -63,6 +69,28 @@ export const SearchablePage = ({ onSearch, onAutoComplete, children }: Props) =>
     const [newSuggestionData, setNewSuggestionData] = useState<GetAutoCompleteMultipleResultsQuery | undefined>();
     const { user } = userContext;
     const viewUrn = userContext.localState?.selectedViewUrn;
+
+    const { title, updateTitle } = useBrowserTitle();
+
+    useEffect(() => {
+        // Update the title only if it's not already set and there is a valid pathname
+        if (!title && location.pathname) {
+          const formattedPath = location.pathname
+            .split('/')
+            .filter(word => word !== '')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' | ');
+    
+          if (formattedPath) {
+            return updateTitle(formattedPath);
+          }
+        }
+    
+        // Clean up the title when the component unmounts
+        return () => {
+          updateTitle('');
+        };
+      }, [location.pathname, title, updateTitle]);
 
     useEffect(() => {
         if (suggestionsData !== undefined) {
@@ -87,10 +115,11 @@ export const SearchablePage = ({ onSearch, onAutoComplete, children }: Props) =>
             query,
             filters: appliedFilters,
             history,
+            selectedSortOption,
         });
     };
 
-    const autoComplete = (query: string) => {
+    const autoComplete = debounce((query: string) => {
         if (query && query.trim() !== '') {
             getAutoCompleteResults({
                 variables: {
@@ -102,7 +131,7 @@ export const SearchablePage = ({ onSearch, onAutoComplete, children }: Props) =>
                 },
             });
         }
-    };
+    }, HALF_SECOND_IN_MS);
 
     // Load correct autocomplete results on initial page load.
     useEffect(() => {
@@ -135,6 +164,9 @@ export const SearchablePage = ({ onSearch, onAutoComplete, children }: Props) =>
                 authenticatedUserPictureLink={user?.editableProperties?.pictureLink}
                 entityRegistry={entityRegistry}
             />
+            <Helmet>
+                <title>{title}</title>
+            </Helmet>
             <div style={styles.children}>{children}</div>
         </>
     );

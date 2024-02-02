@@ -21,8 +21,10 @@ import { DownloadSearchResults, DownloadSearchResultsInput } from './utils/types
 import SearchFilters from './filters/SearchFilters';
 import useGetSearchQueryInputs from './useGetSearchQueryInputs';
 import useSearchFilterAnalytics from './filters/useSearchFilterAnalytics';
-import { useIsSearchV2, useSearchVersion } from './useSearchAndBrowseVersion';
+import { useIsBrowseV2, useIsSearchV2, useSearchVersion } from './useSearchAndBrowseVersion';
 import useFilterMode from './filters/useFilterMode';
+import { useUpdateEducationStepIdsAllowlist } from '../onboarding/useUpdateEducationStepIdsAllowlist';
+import { useSelectedSortOption } from './context/SearchContext';
 
 /**
  * A search results page.
@@ -30,10 +32,12 @@ import useFilterMode from './filters/useFilterMode';
 export const SearchPage = () => {
     const { trackClearAllFiltersEvent } = useSearchFilterAnalytics();
     const showSearchFiltersV2 = useIsSearchV2();
+    const showBrowseV2 = useIsBrowseV2();
     const searchVersion = useSearchVersion();
     const history = useHistory();
-    const { query, unionType, filters, orFilters, viewUrn, page, activeType } = useGetSearchQueryInputs();
+    const { query, unionType, filters, orFilters, viewUrn, page, activeType, sortInput } = useGetSearchQueryInputs();
     const { filterMode, filterModeRef, setFilterMode } = useFilterMode(filters, unionType);
+    const selectedSortOption = useSelectedSortOption();
 
     const [numResultsPerPage, setNumResultsPerPage] = useState(SearchCfg.RESULTS_PER_PAGE);
     const [isSelectMode, setIsSelectMode] = useState(false);
@@ -54,8 +58,11 @@ export const SearchPage = () => {
                 filters: [],
                 orFilters,
                 viewUrn,
+                sortInput,
+                searchFlags: { getSuggestions: true },
             },
         },
+        fetchPolicy: 'cache-and-network',
     });
 
     const total = data?.searchAcrossEntities?.total || 0;
@@ -91,7 +98,15 @@ export const SearchPage = () => {
     };
 
     const onChangeFilters = (newFilters: Array<FacetFilterInput>) => {
-        navigateToSearchUrl({ type: activeType, query, page: 1, filters: newFilters, history, unionType });
+        navigateToSearchUrl({
+            type: activeType,
+            query,
+            selectedSortOption,
+            page: 1,
+            filters: newFilters,
+            history,
+            unionType,
+        });
     };
 
     const onClearFilters = () => {
@@ -100,12 +115,28 @@ export const SearchPage = () => {
     };
 
     const onChangeUnionType = (newUnionType: UnionType) => {
-        navigateToSearchUrl({ type: activeType, query, page: 1, filters, history, unionType: newUnionType });
+        navigateToSearchUrl({
+            type: activeType,
+            query,
+            selectedSortOption,
+            page: 1,
+            filters,
+            history,
+            unionType: newUnionType,
+        });
     };
 
     const onChangePage = (newPage: number) => {
         scrollToTop();
-        navigateToSearchUrl({ type: activeType, query, page: newPage, filters, history, unionType });
+        navigateToSearchUrl({
+            type: activeType,
+            query,
+            selectedSortOption,
+            page: newPage,
+            filters,
+            history,
+            unionType,
+        });
     };
 
     /**
@@ -167,6 +198,12 @@ export const SearchPage = () => {
         }
     }, [isSelectMode]);
 
+    // Render new search filters v2 onboarding step if the feature flag is on
+    useUpdateEducationStepIdsAllowlist(showSearchFiltersV2, SEARCH_RESULTS_FILTERS_V2_INTRO);
+
+    // Render new browse v2 onboarding step if the feature flag is on
+    useUpdateEducationStepIdsAllowlist(showBrowseV2, SEARCH_RESULTS_BROWSE_SIDEBAR_ID);
+
     return (
         <>
             {!loading && (
@@ -181,6 +218,7 @@ export const SearchPage = () => {
             )}
             {showSearchFiltersV2 && (
                 <SearchFilters
+                    loading={loading}
                     availableFilters={data?.searchAcrossEntities?.facets || []}
                     activeFilters={filters}
                     unionType={unionType}
@@ -200,6 +238,7 @@ export const SearchPage = () => {
                 error={error}
                 searchResponse={data?.searchAcrossEntities}
                 facets={data?.searchAcrossEntities?.facets}
+                suggestions={data?.searchAcrossEntities?.suggestions || []}
                 selectedFilters={filters}
                 loading={loading}
                 onChangeFilters={onChangeFilters}
